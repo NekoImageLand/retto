@@ -1,27 +1,23 @@
 use crate::error::RettoResult;
+use crate::points::PointBox;
 use crate::processor::det_processor::LimitType;
-use image::{GenericImageView, ImageBuffer, Rgb, RgbImage, imageops};
+use image::imageops::{FilterType, rotate270};
+use image::{ImageBuffer, Rgb, RgbImage, imageops};
+use imageproc::definitions::HasWhite;
+use imageproc::geometric_transformations::{Interpolation, Projection, warp_into};
 use ndarray::prelude::*;
+use ordered_float::OrderedFloat;
 use std::cmp::{max, min};
 
-pub struct ImageHelper {
+pub(crate) struct ImageHelper {
     inner: Option<RgbImage>,
     ori_h: usize,
     ori_w: usize,
 }
 
-impl Into<RettoResult<Array3<u8>>> for ImageHelper {
-    fn into(self) -> RettoResult<Array3<u8>> {
-        let image = self.inner.unwrap();
-        let (w, h) = image.dimensions();
-        let raw = image.into_raw();
-        Ok(Array3::from_shape_vec((h as usize, w as usize, 3), raw)?)
-    }
-}
-
 impl ImageHelper {
     /// Heavy
-    pub fn new_from_raw_img(input: impl AsRef<[u8]>) -> RettoResult<Self> {
+    pub fn new_from_raw_img_flow(input: impl AsRef<[u8]>) -> RettoResult<Self> {
         let image = image::load_from_memory(input.as_ref())?;
         let image = image.to_rgb8();
         let (ori_w, ori_h) = image.dimensions();
@@ -33,7 +29,7 @@ impl ImageHelper {
     }
 
     /// Heavy
-    pub fn new_from_rgb_image(input: impl AsRef<[u8]>, height: usize, weight: usize) -> Self {
+    pub fn new_from_rgb_image_flow(input: impl AsRef<[u8]>, height: usize, weight: usize) -> Self {
         let image: ImageBuffer<Rgb<u8>, &[u8]> =
             ImageBuffer::from_raw(weight as u32, height as u32, input.as_ref())
                 .expect("Failed to create ImageBuffer from raw data");
@@ -46,9 +42,37 @@ impl ImageHelper {
         }
     }
 
+    pub fn new_from_rgb_image(input: RgbImage) -> Self {
+        let (ori_w, ori_h) = input.dimensions();
+        Self {
+            inner: Some(input),
+            ori_h: ori_h as usize,
+            ori_w: ori_w as usize,
+        }
+    }
+
+    pub fn take_inner(&mut self) -> Option<RgbImage> {
+        self.inner.take()
+    }
+
     #[inline]
     pub fn ori_size(&self) -> (usize, usize) {
         (self.ori_h, self.ori_w)
+    }
+
+    #[inline]
+    pub fn ori_ratio(&self) -> f64 {
+        let (h, w) = self.ori_size();
+        (h as f64) / (w as f64)
+    }
+
+    pub fn array_view(&self) -> RettoResult<ArrayView3<u8>> {
+        let image = self.inner.as_ref().unwrap();
+        let (w, h) = image.dimensions();
+        Ok(ArrayView3::from_shape(
+            (h as usize, w as usize, 3),
+            image.as_raw().as_slice(),
+        )?)
     }
 
     pub fn resize_both(
@@ -73,7 +97,7 @@ impl ImageHelper {
                 &image.unwrap(), // TODO:
                 resize_w,
                 resize_h,
-                imageops::FilterType::Triangle,
+                FilterType::Triangle,
             ))
         }
         if min(self.ori_h, self.ori_w) < crop_min_size_len {
@@ -88,15 +112,15 @@ impl ImageHelper {
                 &image.unwrap(),
                 resize_w,
                 resize_h,
-                imageops::FilterType::Triangle,
+                FilterType::Triangle,
             ))
         }
-        self.inner = image.map(RgbImage::from);
+        self.inner = image;
         Ok((ratio_h, ratio_w))
     }
 
     pub fn resize_either(&mut self, limit_type: &LimitType, limit_len: usize) -> RettoResult<()> {
-        let mut image: Option<ImageBuffer<Rgb<u8>, Vec<u8>>> = Some(self.inner.take().unwrap());
+        let image: Option<ImageBuffer<Rgb<u8>, Vec<u8>>> = Some(self.inner.take().unwrap());
         let (w, h) = image.as_ref().unwrap().dimensions();
         let ratio = match limit_type {
             LimitType::Max => match max(w, h) > limit_len as u32 {
@@ -116,9 +140,40 @@ impl ImageHelper {
             &image.unwrap(),
             resize_w,
             resize_h,
-            imageops::FilterType::Triangle,
+            FilterType::Triangle,
         ));
         Ok(())
+    }
+
+    pub fn resize_norm_image(&self, cls_shape: [usize; 3]) -> Array3<f32> {
+        let [img_c, img_h, img_w] = cls_shape;
+        let (h, w) = (self.ori_h as u32, self.ori_w as u32);
+        let resized_w = min(img_w, (img_h as f64 * w as f64 / h as f64).ceil() as usize);
+        let resized_img = imageops::resize(
+            self.inner.as_ref().unwrap(),
+            resized_w as u32,
+            img_h as u32,
+            FilterType::Triangle,
+        );
+        let mut resized_img_np = match img_c {
+            1 => {
+                let hw = Array3::from_shape_fn((img_h, resized_w, 1), |(y, x, _)| {
+                    let pixel = resized_img.get_pixel(x as u32, y as u32)[0];
+                    pixel as f32 / 255.0
+                });
+                hw.permuted_axes([2, 0, 1])
+            }
+            _ => Array3::from_shape_fn((3, img_h, resized_w), |(c, y, x)| {
+                let pixel = resized_img.get_pixel(x as u32, y as u32);
+                pixel[c] as f32 / 255.0
+            }),
+        };
+        resized_img_np.mapv_inplace(|v| (v - 0.5) / 0.5);
+        let mut padding_im = Array3::<f32>::zeros((img_c, img_h, img_w));
+        padding_im
+            .slice_mut(s![.., .., 0..resized_w])
+            .assign(&resized_img_np);
+        padding_im
     }
 
     pub fn rgb2bgr(&mut self) -> RettoResult<Array3<u8>> {
@@ -131,5 +186,35 @@ impl ImageHelper {
         }
         let arr = Array3::from_shape_vec((h as usize, w as usize, 3), raw)?;
         Ok(arr)
+    }
+
+    pub fn get_crop_img(&self, point: &PointBox<OrderedFloat<f64>>) -> RgbImage {
+        let img_crop_width = max(point.width_brc(), point.width_tlc()).into_inner() as f32;
+        let img_crop_height = max(point.height_brc(), point.height_tlc()).into_inner() as f32;
+        let (w, h) = (img_crop_width as u32, img_crop_height as u32);
+        let mut out: RgbImage = ImageBuffer::new(w, h);
+        let proj = Projection::from_control_points(
+            point
+                .points()
+                .map(|p| (p.x.into_inner() as f32, p.y.into_inner() as f32)),
+            [
+                (0.0, 0.0),
+                (img_crop_width, 0.0),
+                (img_crop_width, img_crop_height),
+                (0.0, img_crop_height),
+            ],
+        )
+        .unwrap(); // TODO:
+        warp_into(
+            self.inner.as_ref().unwrap(),
+            &proj,
+            Interpolation::Bicubic,
+            Rgb::white(), // TODO: in opencv impl is cv2.BORDER_REPLICATE, not cv2.BORDER_CONSTANT
+            &mut out,
+        );
+        if (out.height() as f32) / (out.width() as f32) >= 1.5 {
+            return rotate270(&out);
+        }
+        out
     }
 }

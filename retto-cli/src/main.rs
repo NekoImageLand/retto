@@ -9,10 +9,10 @@ use tracing_subscriber::prelude::*;
 pub struct Cli {
     #[arg(short, long, default_value = "ch_PP-OCRv4_det_infer.onnx")]
     det_model_path: String,
-    #[arg(short, long, default_value = "ch_PP-OCRv4_rec_infer.onnx")]
-    rec_model_path: String,
     #[arg(short, long, default_value = "ch_ppocr_mobile_v2.0_cls_infer.onnx")]
     cls_model_path: String,
+    #[arg(short, long, default_value = "ch_PP-OCRv4_rec_infer.onnx")]
+    rec_model_path: String,
     #[arg(short, long)]
     image: String,
 }

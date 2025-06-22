@@ -1,6 +1,6 @@
 use crate::error::RettoResult;
 use crate::worker::{RettoInnerWorker, RettoWorker};
-use ndarray::{Array4, Ix4};
+use ndarray::prelude::*;
 use ort::execution_providers::ArenaExtendStrategy::NextPowerOfTwo;
 use ort::execution_providers::cuda::CuDNNConvAlgorithmSearch::Exhaustive;
 use ort::execution_providers::{
@@ -61,12 +61,12 @@ impl RettoWorker for RettoOrtWorker {
         let det_session = ort::session::Session::builder()?
             .with_execution_providers(providers.as_slice())?
             .commit_from_file(cfg.det_model_path.clone())?;
-        let rec_session = ort::session::Session::builder()?
-            .with_execution_providers(providers.as_slice())?
-            .commit_from_file(cfg.rec_model_path.clone())?;
         let cls_session = ort::session::Session::builder()?
             .with_execution_providers(providers.as_slice())?
             .commit_from_file(cfg.cls_model_path.clone())?;
+        let rec_session = ort::session::Session::builder()?
+            .with_execution_providers(providers.as_slice())?
+            .commit_from_file(cfg.rec_model_path.clone())?;
         let worker = RettoOrtWorker {
             cfg,
             det_session,
@@ -93,11 +93,18 @@ impl RettoInnerWorker for RettoOrtWorker {
         Ok(output)
     }
 
-    fn cls(&mut self, input: Array4<f32>) -> RettoResult<Array4<f32>> {
-        todo!()
+    fn cls(&mut self, input: Array4<f32>) -> RettoResult<Array2<f32>> {
+        let outputs = self.cls_session.run(ort::inputs! {
+            "x" => TensorRef::from_array_view(&input.as_standard_layout())?
+        })?;
+        let val = &outputs[0]
+            .try_extract_array::<f32>()?
+            .into_dimensionality::<Ix2>()?;
+        let output = val.to_owned();
+        Ok(output)
     }
 
-    fn rec(&mut self, input: Array4<f32>) -> RettoResult<Array4<f32>> {
+    fn rec(&mut self, input: Array4<f32>) -> RettoResult<Array3<f32>> {
         todo!()
     }
 }

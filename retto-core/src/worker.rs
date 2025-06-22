@@ -6,8 +6,8 @@ use std::fmt::Debug;
 
 pub(crate) trait RettoInnerWorker {
     fn det(&mut self, input: Array4<f32>) -> RettoResult<Array4<f32>>;
-    fn cls(&mut self, input: Array4<f32>) -> RettoResult<Array4<f32>>;
-    fn rec(&mut self, input: Array4<f32>) -> RettoResult<Array4<f32>>;
+    fn cls(&mut self, input: Array4<f32>) -> RettoResult<Array2<f32>>;
+    fn rec(&mut self, input: Array4<f32>) -> RettoResult<Array3<f32>>;
 }
 
 pub trait RettoWorker: RettoInnerWorker {

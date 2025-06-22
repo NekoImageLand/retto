@@ -3,32 +3,43 @@ pub mod det_processor;
 pub mod rec_processor;
 
 use crate::error::RettoResult;
-use ndarray::prelude::*;
 
 pub trait ProcessorInnerRes {
     type FinalResult;
 }
 
-trait ProcessorInner: ProcessorInnerRes {
-    fn preprocess(&self, input: &Array3<u8>) -> RettoResult<Array4<f32>>;
-    fn postprocess(&self, input: &Array4<f32>) -> RettoResult<Self::FinalResult>;
+pub(crate) trait ProcessorInnerIO: ProcessorInnerRes {
+    type PreProcessInput<'ppl>;
+    type PreProcessOutput<'ppl>;
+    type PostProcessInput<'ppl>;
+    type PostProcessOutput<'ppl>;
 }
 
-pub trait Processor<'a>: ProcessorInner {
+trait ProcessorInner: ProcessorInnerIO {
+    fn preprocess<'a>(
+        &self,
+        input: Self::PreProcessInput<'a>,
+    ) -> RettoResult<Self::PreProcessOutput<'a>>;
+    fn postprocess<'a>(
+        &self,
+        input: Self::PostProcessInput<'a>,
+    ) -> RettoResult<Self::PostProcessOutput<'a>>;
+}
+
+pub(crate) trait Processor: ProcessorInner {
     type Config;
-    fn process<F>(&self, input: &Array3<u8>, mut worker_fun: F) -> RettoResult<Self::FinalResult>
+    type ProcessInput<'pl>;
+    fn process<'a, F>(
+        &self,
+        input: Self::ProcessInput<'a>,
+        worker_fun: F,
+    ) -> RettoResult<Self::FinalResult>
     where
-        F: FnMut(Array4<f32>) -> RettoResult<Array4<f32>>,
-    {
-        let pre_processed = self.preprocess(input)?;
-        let worker_res = worker_fun(pre_processed)?;
-        let post_processed = self.postprocess(&worker_res)?;
-        Ok(post_processed)
-    }
+        F: FnMut(Self::PreProcessOutput<'a>) -> RettoResult<Self::PostProcessInput<'a>>;
 }
 
-pub mod prelude {
-    pub use super::Processor;
+pub(crate) mod prelude {
+    pub(crate) use super::Processor;
     pub use super::cls_processor::*;
     pub use super::det_processor::*;
     pub use super::rec_processor::*;

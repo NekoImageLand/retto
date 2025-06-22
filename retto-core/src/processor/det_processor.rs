@@ -1,7 +1,7 @@
-use crate::error::{RettoError, RettoResult};
+use crate::error::RettoResult;
 use crate::image_helper::ImageHelper;
 use crate::points::{Point, PointBox};
-use crate::processor::{Processor, ProcessorInner, ProcessorInnerRes};
+use crate::processor::{Processor, ProcessorInner, ProcessorInnerIO, ProcessorInnerRes};
 use geo::prelude::*;
 use geo_clipper::{Clipper, EndType, JoinType};
 use geo_types::{Coord, LineString, Polygon};
@@ -70,24 +70,25 @@ impl Default for DetProcessorConfig {
 }
 
 #[derive(Debug)]
-pub struct DetProcessor<'a> {
-    config: &'a DetProcessorConfig,
+pub(crate) struct DetProcessor<'p> {
+    config: &'p DetProcessorConfig,
     dilation_kernel: Option<Mask>,
     ori_h: usize,
     ori_w: usize,
 }
 
 #[derive(Debug)]
-pub struct DetProcessorResult {
-    pub targets: Vec<(PointBox<OrderedFloat<f64>>, f32)>,
-}
+pub struct DetProcessorResult(pub Vec<(PointBox<OrderedFloat<f64>>, f32)>);
 
 impl ProcessorInnerRes for DetProcessor<'_> {
     type FinalResult = DetProcessorResult;
 }
 
-impl<'a> Processor<'a> for DetProcessor<'a> {
-    type Config = DetProcessorConfig;
+impl ProcessorInnerIO for DetProcessor<'_> {
+    type PreProcessInput<'ppl> = ArrayView3<'ppl, u8>;
+    type PreProcessOutput<'ppl> = Array4<f32>;
+    type PostProcessInput<'ppl> = Array4<f32>;
+    type PostProcessOutput<'ppl> = DetProcessorResult;
 }
 
 fn trans_dilation_kernel(kernel: &Array2<usize>) -> Mask {
@@ -104,11 +105,7 @@ fn trans_dilation_kernel(kernel: &Array2<usize>) -> Mask {
 
 /// PreProcess
 impl<'a> DetProcessor<'a> {
-    pub fn new(
-        config: &'a DetProcessorConfig,
-        ori_h: usize,
-        ori_w: usize,
-    ) -> Result<Self, RettoError> {
+    pub fn new(config: &'a DetProcessorConfig, ori_h: usize, ori_w: usize) -> RettoResult<Self> {
         Ok(DetProcessor {
             config,
             dilation_kernel: config.dilation_kernel.as_ref().map(trans_dilation_kernel),
@@ -147,7 +144,7 @@ impl<'a> DetProcessor<'a> {
         T: AsPrimitive<f32> + Num + NumCast + Signed + Copy + Ord + Debug,
     {
         let rect = min_area_rect(contour_points);
-        let point_box = PointBox::new_from_clockwise(rect.map(|p| Point::from(p)));
+        let point_box = PointBox::new_from_clockwise(rect.map(Point::from));
         let side1 = self.euclid_dist(point_box.tl(), point_box.tr());
         let side2 = self.euclid_dist(point_box.bl(), point_box.br());
         let sside = side1.min(side2);
@@ -200,11 +197,11 @@ impl<'a> DetProcessor<'a> {
             .collect();
         let polygon = Polygon::new(LineString(exterior_coords), vec![]);
         let area = polygon.unsigned_area();
-        let perimeter = polygon.exterior().euclidean_length()
+        let perimeter = Euclidean.length(polygon.exterior())
             + polygon
                 .interiors()
                 .iter()
-                .map(|ring| ring.euclidean_length())
+                .map(|ring| Euclidean.length(ring))
                 .sum::<f64>();
         let distance = area * (self.config.unclip_ratio as f64) / perimeter;
         let offset_polys =
@@ -222,11 +219,17 @@ impl<'a> DetProcessor<'a> {
 }
 
 impl ProcessorInner for DetProcessor<'_> {
-    fn preprocess(&self, input: &Array3<u8>) -> RettoResult<Array4<f32>> {
-        let h = input.shape().get(0).unwrap();
+    fn preprocess<'a>(
+        &self,
+        input: Self::PreProcessInput<'a>,
+    ) -> RettoResult<Self::PreProcessOutput<'a>> {
+        let h = input.shape().first().unwrap();
         let w = input.shape().get(1).unwrap();
-        let mut rs_helper =
-            ImageHelper::new_from_rgb_image(input.as_standard_layout().as_slice().unwrap(), *h, *w);
+        let mut rs_helper = ImageHelper::new_from_rgb_image_flow(
+            input.as_standard_layout().as_slice().unwrap(),
+            *h,
+            *w,
+        );
         rs_helper.resize_either(&self.config.limit_type, self.config.limit_side_len)?;
         let input = rs_helper.rgb2bgr()?;
         let input = self.normalize(&input)?;
@@ -239,7 +242,10 @@ impl ProcessorInner for DetProcessor<'_> {
     // Check for precision alignment issues with the Python implementation,
     // especially before and after find_contours (since find_contours never uses floating point
     // numbers internally and is not fully consistent with the opencv implementation).
-    fn postprocess(&self, input: &Array4<f32>) -> RettoResult<Self::FinalResult> {
+    fn postprocess<'a>(
+        &self,
+        input: Self::PostProcessInput<'a>,
+    ) -> RettoResult<Self::PostProcessOutput<'a>> {
         let pred = input.slice(s![0, 0, .., ..]);
         let (h, w) = { (pred.shape()[0] as u32, pred.shape()[1] as u32) };
         let mut mask = GrayImage::from_fn(w, h, |x, y| {
@@ -247,8 +253,9 @@ impl ProcessorInner for DetProcessor<'_> {
             Luma([if v > self.config.threch { 255 } else { 0 }])
         });
         if let Some(ref k) = self.dilation_kernel {
-            mask = grayscale_dilate(&mut mask, &k);
+            mask = grayscale_dilate(&mut mask, k);
         }
+        // TODO: need check find_contours's output!
         let mut boxes_pair: Vec<_> = find_contours::<i32>(&mask)
             .iter()
             .filter_map(|contour| {
@@ -257,7 +264,7 @@ impl ProcessorInner for DetProcessor<'_> {
                 if sside < self.config.min_size as f32 {
                     return None;
                 }
-                let mean_score = self.box_score_fast(&pred.into(), &points);
+                let mean_score = self.box_score_fast(&pred, &points);
                 if mean_score < self.config.box_thresh {
                     return None;
                 }
@@ -269,7 +276,7 @@ impl ProcessorInner for DetProcessor<'_> {
                 }
                 point_box.scale_and_clip(w as f64, h as f64, self.ori_w as f64, self.ori_h as f64);
                 // #region filter_det_res
-                let (pb_h, pb_w) = (point_box.height(), point_box.width());
+                let (pb_h, pb_w) = (point_box.height_tlc(), point_box.width_tlc());
                 if pb_h <= OrderedFloat(3f64) || pb_w <= OrderedFloat(3f64) {
                     return None;
                 }
@@ -287,8 +294,24 @@ impl ProcessorInner for DetProcessor<'_> {
                 y1.partial_cmp(&y2).unwrap()
             }
         });
-        Ok(DetProcessorResult {
-            targets: boxes_pair,
-        })
+        Ok(DetProcessorResult(boxes_pair))
+    }
+}
+
+impl<'p> Processor for DetProcessor<'p> {
+    type Config = DetProcessorConfig;
+    type ProcessInput<'pl> = Self::PreProcessInput<'pl>;
+    fn process<'a, F>(
+        &self,
+        input: Self::PreProcessInput<'a>,
+        mut worker_fun: F,
+    ) -> RettoResult<Self::FinalResult>
+    where
+        F: FnMut(Self::PreProcessOutput<'a>) -> RettoResult<Self::PostProcessInput<'a>>,
+    {
+        let pre_processed = self.preprocess(input)?;
+        let worker_res = worker_fun(pre_processed)?;
+        let post_processed = self.postprocess(worker_res)?;
+        Ok(post_processed)
     }
 }

@@ -1,5 +1,5 @@
 use imageproc::point::Point as ImagePoint;
-use num_traits::{AsPrimitive, Num, NumCast, Signed, abs};
+use num_traits::{AsPrimitive, Num, NumCast, Signed};
 use std::fmt::Debug;
 
 #[derive(Debug, Copy, Clone)]
@@ -90,19 +90,56 @@ where
         &self.inner[3]
     }
 
-    /// Returns the height of the bounding box
+    /// Returns the height of the bounding box (from top-left)
     #[inline]
-    pub fn height(&self) -> T {
-        abs(self.tr().y - self.br().y)
+    pub fn height_tlc(&self) -> T
+    where
+        T: Num + NumCast + Copy + Ord + Debug + AsPrimitive<f64>,
+    {
+        let dx: f64 = (self.tl().x - self.bl().x).as_();
+        let dy: f64 = (self.tl().y - self.bl().y).as_();
+        let dist = (dx * dx + dy * dy).sqrt();
+        NumCast::from(dist).unwrap()
     }
 
-    /// Returns the width of the bounding box
+    /// Returns the width of the bounding box (from top-left)
     #[inline]
-    pub fn width(&self) -> T {
-        abs(self.tl().x - self.tr().x)
+    pub fn width_tlc(&self) -> T
+    where
+        T: Num + NumCast + Copy + Ord + Debug + AsPrimitive<f64>,
+    {
+        let dx: f64 = (self.tl().x - self.tr().x).as_();
+        let dy: f64 = (self.tl().y - self.tr().y).as_();
+        let dist = (dx * dx + dy * dy).sqrt();
+        NumCast::from(dist).unwrap()
+    }
+
+    /// Returns the height of the bounding box (from bottom-right)
+    #[inline]
+    pub fn height_brc(&self) -> T
+    where
+        T: Num + NumCast + Copy + Ord + Debug + AsPrimitive<f64>,
+    {
+        let dx: f64 = (self.tr().x - self.br().x).as_();
+        let dy: f64 = (self.tr().y - self.br().y).as_();
+        let dist = (dx * dx + dy * dy).sqrt();
+        NumCast::from(dist).unwrap()
+    }
+
+    /// Returns the width of the bounding box (from bottom-right)
+    #[inline]
+    pub fn width_brc(&self) -> T
+    where
+        T: Num + NumCast + Copy + Ord + Debug + AsPrimitive<f64>,
+    {
+        let dx: f64 = (self.bl().x - self.br().x).as_();
+        let dy: f64 = (self.bl().y - self.br().y).as_();
+        let dist = (dx * dx + dy * dy).sqrt();
+        NumCast::from(dist).unwrap()
     }
 
     /// Returns the center point of the bounding box
+    #[inline]
     pub fn center_point(&self) -> Point<T> {
         let center_x = (self.tl().x + self.br().x) / NumCast::from(2).unwrap();
         let center_y = (self.tl().y + self.br().y) / NumCast::from(2).unwrap();
