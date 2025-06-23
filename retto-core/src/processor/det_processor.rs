@@ -274,7 +274,8 @@ impl ProcessorInner for DetProcessor<'_> {
                 if sside < (self.config.min_size + 2) as f32 {
                     return None;
                 }
-                point_box.scale_and_clip(w as f64, h as f64, self.ori_w as f64, self.ori_h as f64);
+                let (mask_w, mask_h) = (mask.width() as f64, mask.height() as f64);
+                point_box.scale_and_clip(mask_w, mask_h, w as f64, h as f64);
                 // #region filter_det_res
                 let (pb_h, pb_w) = (point_box.height_tlc(), point_box.width_tlc());
                 if pb_h <= OrderedFloat(3f64) || pb_w <= OrderedFloat(3f64) {

@@ -18,6 +18,7 @@ pub(crate) struct ImageHelper {
 impl ImageHelper {
     /// Heavy
     pub fn new_from_raw_img_flow(input: impl AsRef<[u8]>) -> RettoResult<Self> {
+        // TODO: cvt_two_to_three + cvt_four_to_three
         let image = image::load_from_memory(input.as_ref())?;
         let image = image.to_rgb8();
         let (ori_w, ori_h) = image.dimensions();
