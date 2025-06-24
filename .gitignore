@@ -4,3 +4,4 @@ target/
 *.onnx
 *.png
 *.jpg
+*.txt

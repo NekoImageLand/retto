@@ -4,6 +4,8 @@ use crate::error::RettoResult;
 use ndarray::prelude::*;
 use std::fmt::Debug;
 
+// TODO: Split each worker into different cases so that GAT can be fully utilised,
+// TODO: and take advantage of the metadata functionality of the ONNX model
 pub(crate) trait RettoInnerWorker {
     fn det(&mut self, input: Array4<f32>) -> RettoResult<Array4<f32>>;
     fn cls(&mut self, input: Array4<f32>) -> RettoResult<Array2<f32>>;

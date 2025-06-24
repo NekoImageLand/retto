@@ -1,12 +1,13 @@
 use crate::error::RettoResult;
 use crate::points::PointBox;
 use crate::processor::det_processor::LimitType;
-use image::imageops::{FilterType, rotate270};
+use image::imageops::rotate270;
 use image::{ImageBuffer, Rgb, RgbImage, imageops};
 use imageproc::definitions::HasWhite;
 use imageproc::geometric_transformations::{Interpolation, Projection, warp_into};
 use ndarray::prelude::*;
 use ordered_float::OrderedFloat;
+use paste::paste;
 use std::cmp::{max, min};
 
 pub(crate) struct ImageHelper {
@@ -15,6 +16,19 @@ pub(crate) struct ImageHelper {
     ori_w: usize,
 }
 
+pub(crate) trait ImagesOrder {
+    type Item;
+    fn ordered_by<K, F>(&mut self, order_f: F)
+    where
+        F: FnMut(&Self::Item) -> K,
+        K: Ord;
+    fn get_ordered_index<K, F>(&self, order_f: F) -> Vec<usize>
+    where
+        F: FnMut(&Self::Item) -> K,
+        K: Ord;
+}
+
+// TODO: Use fast_image_resize with interpolation methods
 impl ImageHelper {
     /// Heavy
     pub fn new_from_raw_img_flow(input: impl AsRef<[u8]>) -> RettoResult<Self> {
@@ -67,6 +81,19 @@ impl ImageHelper {
         (h as f64) / (w as f64)
     }
 
+    #[inline]
+    pub fn size(&self) -> (usize, usize) {
+        let image = self.inner.as_ref().unwrap();
+        let (w, h) = image.dimensions();
+        (h as usize, w as usize)
+    }
+
+    #[inline]
+    pub fn ratio(&self) -> f64 {
+        let (h, w) = self.size();
+        (h as f64) / (w as f64)
+    }
+
     pub fn array_view(&self) -> RettoResult<ArrayView3<u8>> {
         let image = self.inner.as_ref().unwrap();
         let (w, h) = image.dimensions();
@@ -94,11 +121,11 @@ impl ImageHelper {
             );
             ratio_h = h / resize_h as f32;
             ratio_w = w / resize_w as f32;
-            image = Some(imageops::resize(
+            image = Some(imageops::thumbnail(
                 &image.unwrap(), // TODO:
                 resize_w,
                 resize_h,
-                FilterType::Triangle,
+                // FilterType::Triangle,
             ))
         }
         if min(self.ori_h, self.ori_w) < crop_min_size_len {
@@ -109,11 +136,11 @@ impl ImageHelper {
             );
             ratio_h = h / resize_h as f32;
             ratio_w = w / resize_w as f32;
-            image = Some(imageops::resize(
+            image = Some(imageops::thumbnail(
                 &image.unwrap(),
                 resize_w,
                 resize_h,
-                FilterType::Triangle,
+                // FilterType::Triangle,
             ))
         }
         self.inner = image;
@@ -137,32 +164,36 @@ impl ImageHelper {
             (((h as f32 * ratio).floor() / 32.0).round() as u32) * 32,
             (((w as f32 * ratio).floor() / 32.0).round() as u32) * 32,
         );
-        self.inner = Some(imageops::resize(
+        self.inner = Some(imageops::thumbnail(
             &image.unwrap(),
             resize_w,
             resize_h,
-            FilterType::Triangle,
+            // FilterType::Triangle,
         ));
         Ok(())
     }
 
-    pub fn resize_norm_image(&self, cls_shape: [usize; 3]) -> Array3<f32> {
-        let [img_c, img_h, img_w] = cls_shape;
+    pub fn resize_norm_image(&self, shape: [usize; 3], max_wh_ratio: Option<f32>) -> Array3<f32> {
+        let [img_c, img_h, img_w] = shape;
+        let img_w = match max_wh_ratio {
+            Some(mr) => (img_h as f32 * mr) as usize,
+            None => img_w,
+        };
         let (h, w) = (self.ori_h as u32, self.ori_w as u32);
         let resized_w = min(img_w, (img_h as f64 * w as f64 / h as f64).ceil() as usize);
-        let resized_img = imageops::resize(
+        let resized_img = imageops::thumbnail(
             self.inner.as_ref().unwrap(),
             resized_w as u32,
             img_h as u32,
-            FilterType::Triangle,
+            // FilterType::Triangle,
         );
         let mut resized_img_np = match img_c {
             1 => {
-                let hw = Array3::from_shape_fn((img_h, resized_w, 1), |(y, x, _)| {
+                let hwc = Array3::from_shape_fn((img_h, resized_w, 1), |(y, x, _)| {
                     let pixel = resized_img.get_pixel(x as u32, y as u32)[0];
                     pixel as f32 / 255.0
                 });
-                hw.permuted_axes([2, 0, 1])
+                hwc.permuted_axes([2, 0, 1])
             }
             _ => Array3::from_shape_fn((3, img_h, resized_w), |(c, y, x)| {
                 let pixel = resized_img.get_pixel(x as u32, y as u32);
@@ -217,5 +248,63 @@ impl ImageHelper {
             return rotate270(&out);
         }
         out
+    }
+}
+
+macro_rules! impl_rotate {
+    ($($deg:literal),+ $(,)?) => {
+        impl ImageHelper {
+            paste! {
+                $(
+                    pub fn [<rotate_ $deg>](&self) -> RettoResult<RgbImage> {
+                        let image = self.inner.as_ref().unwrap();
+                        let rotated = image::imageops::[<rotate $deg>](image);
+                        Ok(rotated)
+                    }
+                )+
+            }
+        }
+    };
+}
+
+macro_rules! impl_rotate_in_place {
+    ($($deg:literal),+ $(,)?) => {
+        impl ImageHelper {
+            paste! {
+                $(
+                    pub fn [<rotate_ $deg _in_place>](&mut self) -> RettoResult<()> {
+                        let mut img = self.inner.take().unwrap();
+                        image::imageops::[<rotate $deg _in_place>](&mut img);
+                        self.inner = Some(img);
+                        Ok(())
+                    }
+                )+
+            }
+        }
+    };
+}
+
+impl_rotate!(90, 180, 270);
+impl_rotate_in_place!(180);
+
+impl ImagesOrder for [ImageHelper] {
+    type Item = ImageHelper;
+
+    fn ordered_by<K, F>(&mut self, order_f: F)
+    where
+        F: FnMut(&Self::Item) -> K,
+        K: Ord,
+    {
+        self.sort_by_key(order_f);
+    }
+
+    fn get_ordered_index<K, F>(&self, mut order_f: F) -> Vec<usize>
+    where
+        F: FnMut(&Self::Item) -> K,
+        K: Ord,
+    {
+        let mut indices: Vec<usize> = (0..self.len()).collect();
+        indices.sort_by_key(|&i| order_f(&self[i]));
+        indices
     }
 }

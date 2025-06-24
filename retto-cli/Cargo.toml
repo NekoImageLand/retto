@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 retto-core = { path = "../retto-core" }
+walkdir.workspace = true
 anyhow.workspace = true
 clap.workspace = true
 tracing.workspace = true

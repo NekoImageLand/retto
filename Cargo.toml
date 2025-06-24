@@ -7,6 +7,8 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace.dependencies]
+paste = "1.0.15"
+walkdir = "2.5.0"
 anyhow = "1.0.98"
 thiserror = "2.0.12"
 clap = { version = "4.5.40", features = ["derive"] }
@@ -26,6 +28,6 @@ tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 
 [profile.release]
-opt-level = 3
+opt-level = 2
 lto = true
 codegen-units = 1

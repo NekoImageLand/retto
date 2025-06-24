@@ -10,8 +10,10 @@ pub trait ProcessorInnerRes {
 
 pub(crate) trait ProcessorInnerIO: ProcessorInnerRes {
     type PreProcessInput<'ppl>;
+    type PreProcessInputExtra<'ppl>;
     type PreProcessOutput<'ppl>;
     type PostProcessInput<'ppl>;
+    type PostProcessInputExtra<'ppl>;
     type PostProcessOutput<'ppl>;
 }
 
@@ -19,10 +21,12 @@ trait ProcessorInner: ProcessorInnerIO {
     fn preprocess<'a>(
         &self,
         input: Self::PreProcessInput<'a>,
+        extra: Self::PreProcessInputExtra<'a>,
     ) -> RettoResult<Self::PreProcessOutput<'a>>;
     fn postprocess<'a>(
         &self,
         input: Self::PostProcessInput<'a>,
+        extra: Self::PostProcessInputExtra<'a>,
     ) -> RettoResult<Self::PostProcessOutput<'a>>;
 }
 
@@ -38,7 +42,7 @@ pub(crate) trait Processor: ProcessorInner {
         F: FnMut(Self::PreProcessOutput<'a>) -> RettoResult<Self::PostProcessInput<'a>>;
 }
 
-pub(crate) mod prelude {
+pub mod prelude {
     pub(crate) use super::Processor;
     pub use super::cls_processor::*;
     pub use super::det_processor::*;

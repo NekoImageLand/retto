@@ -33,20 +33,20 @@ pub enum LimitType {
 #[derive(Debug)]
 pub struct DetProcessorConfig {
     /// Preprocess
-    limit_side_len: usize,
-    limit_type: LimitType,
-    mean: Array1<f32>,
-    std: Array1<f32>,
-    scale: f32,
+    pub limit_side_len: usize,
+    pub limit_type: LimitType,
+    pub mean: Array1<f32>,
+    pub std: Array1<f32>,
+    pub scale: f32,
     /// PostProcess
-    threch: f32,
-    box_thresh: f32,
-    max_candidates: usize,
-    unclip_ratio: f32,
-    use_dilation: bool,
-    score_mode: ScoreMode,
-    min_size: usize,
-    dilation_kernel: Option<Array2<usize>>,
+    pub threch: f32,
+    pub box_thresh: f32,
+    pub max_candidates: usize,
+    pub unclip_ratio: f32,
+    pub use_dilation: bool,
+    pub score_mode: ScoreMode,
+    pub min_size: usize,
+    pub dilation_kernel: Option<Array2<usize>>,
 }
 
 impl Default for DetProcessorConfig {
@@ -73,6 +73,7 @@ impl Default for DetProcessorConfig {
 pub(crate) struct DetProcessor<'p> {
     config: &'p DetProcessorConfig,
     dilation_kernel: Option<Mask>,
+    /// Image size after initial resize
     ori_h: usize,
     ori_w: usize,
 }
@@ -86,8 +87,10 @@ impl ProcessorInnerRes for DetProcessor<'_> {
 
 impl ProcessorInnerIO for DetProcessor<'_> {
     type PreProcessInput<'ppl> = ArrayView3<'ppl, u8>;
+    type PreProcessInputExtra<'ppl> = ();
     type PreProcessOutput<'ppl> = Array4<f32>;
     type PostProcessInput<'ppl> = Array4<f32>;
+    type PostProcessInputExtra<'pel> = ();
     type PostProcessOutput<'ppl> = DetProcessorResult;
 }
 
@@ -222,6 +225,7 @@ impl ProcessorInner for DetProcessor<'_> {
     fn preprocess<'a>(
         &self,
         input: Self::PreProcessInput<'a>,
+        _: Self::PreProcessInputExtra<'a>,
     ) -> RettoResult<Self::PreProcessOutput<'a>> {
         let h = input.shape().first().unwrap();
         let w = input.shape().get(1).unwrap();
@@ -245,6 +249,7 @@ impl ProcessorInner for DetProcessor<'_> {
     fn postprocess<'a>(
         &self,
         input: Self::PostProcessInput<'a>,
+        _: Self::PostProcessInputExtra<'a>,
     ) -> RettoResult<Self::PostProcessOutput<'a>> {
         let pred = input.slice(s![0, 0, .., ..]);
         let (h, w) = { (pred.shape()[0] as u32, pred.shape()[1] as u32) };
@@ -274,8 +279,7 @@ impl ProcessorInner for DetProcessor<'_> {
                 if sside < (self.config.min_size + 2) as f32 {
                     return None;
                 }
-                let (mask_w, mask_h) = (mask.width() as f64, mask.height() as f64);
-                point_box.scale_and_clip(mask_w, mask_h, w as f64, h as f64);
+                point_box.scale_and_clip(w as f64, h as f64, self.ori_w as f64, self.ori_h as f64);
                 // #region filter_det_res
                 let (pb_h, pb_w) = (point_box.height_tlc(), point_box.width_tlc());
                 if pb_h <= OrderedFloat(3f64) || pb_w <= OrderedFloat(3f64) {
@@ -310,9 +314,9 @@ impl<'p> Processor for DetProcessor<'p> {
     where
         F: FnMut(Self::PreProcessOutput<'a>) -> RettoResult<Self::PostProcessInput<'a>>,
     {
-        let pre_processed = self.preprocess(input)?;
+        let pre_processed = self.preprocess(input, ())?;
         let worker_res = worker_fun(pre_processed)?;
-        let post_processed = self.postprocess(worker_res)?;
+        let post_processed = self.postprocess(worker_res, ())?;
         Ok(post_processed)
     }
 }

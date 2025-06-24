@@ -105,6 +105,13 @@ impl RettoInnerWorker for RettoOrtWorker {
     }
 
     fn rec(&mut self, input: Array4<f32>) -> RettoResult<Array3<f32>> {
-        todo!()
+        let outputs = self.rec_session.run(ort::inputs! {
+            "x" => TensorRef::from_array_view(&input.as_standard_layout())?
+        })?;
+        let val = &outputs[0]
+            .try_extract_array::<f32>()?
+            .into_dimensionality::<Ix3>()?;
+        let output = val.to_owned();
+        Ok(output)
     }
 }

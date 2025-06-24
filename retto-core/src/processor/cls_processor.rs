@@ -1,22 +1,19 @@
 use crate::error::{RettoError, RettoResult};
 use crate::image_helper::ImageHelper;
 use crate::processor::{Processor, ProcessorInner, ProcessorInnerIO, ProcessorInnerRes};
-use image::RgbImage;
-use image::imageops::rotate180_in_place;
 use ndarray::concatenate;
 use ndarray::prelude::*;
 use ndarray_stats::QuantileExt;
 use ordered_float::OrderedFloat;
-use rayon::prelude::*;
 use std::cmp::Reverse;
 use std::fmt::Display;
 
 #[derive(Debug)]
 pub struct ClsProcessorConfig {
-    image_shape: [usize; 3],
-    batch_num: usize,
-    thresh: f32,
-    label: Vec<u16>,
+    pub image_shape: [usize; 3],
+    pub batch_num: usize,
+    pub thresh: f32,
+    pub label: Vec<u16>,
 }
 
 impl Default for ClsProcessorConfig {
@@ -35,15 +32,14 @@ pub(crate) struct ClsProcessor<'p> {
     config: &'p ClsProcessorConfig,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ClsPostProcessLabel {
     pub label: u16,
     pub score: f32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ClsProcessorSingleResult {
-    pub image: RgbImage,
     pub label: ClsPostProcessLabel,
 }
 
@@ -51,7 +47,6 @@ impl Display for ClsProcessorSingleResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ClsProcessorSingleResult")
             .field("label", &self.label)
-            .field("image", &format!("[Image {:?}]", self.image.dimensions()))
             .finish()
     }
 }
@@ -77,8 +72,10 @@ impl ProcessorInnerRes for ClsProcessor<'_> {
 
 impl ProcessorInnerIO for ClsProcessor<'_> {
     type PreProcessInput<'ppl> = Array4<f32>;
+    type PreProcessInputExtra<'ppl> = ();
     type PreProcessOutput<'ppl> = Array4<f32>;
     type PostProcessInput<'ppl> = Array2<f32>;
+    type PostProcessInputExtra<'ppl> = ();
     type PostProcessOutput<'ppl> = Vec<ClsPostProcessLabel>;
 }
 
@@ -92,6 +89,7 @@ impl ProcessorInner for ClsProcessor<'_> {
     fn preprocess<'a>(
         &self,
         input: Self::PreProcessInput<'a>,
+        _: Self::PreProcessInputExtra<'a>,
     ) -> RettoResult<Self::PreProcessOutput<'a>> {
         Ok(input)
     }
@@ -99,6 +97,7 @@ impl ProcessorInner for ClsProcessor<'_> {
     fn postprocess<'a>(
         &self,
         input: Self::PostProcessInput<'a>,
+        _: Self::PostProcessInputExtra<'a>,
     ) -> RettoResult<Self::PostProcessOutput<'a>> {
         let pred_idxs = input.map_axis(Axis(1), |row| row.argmax().unwrap());
         let mut out = Vec::with_capacity(pred_idxs.len());
@@ -113,28 +112,27 @@ impl ProcessorInner for ClsProcessor<'_> {
 
 impl<'p> Processor for ClsProcessor<'p> {
     type Config = ClsProcessorConfig;
-    type ProcessInput<'pl> = Vec<ImageHelper>;
+    type ProcessInput<'pl> = &'pl mut Vec<ImageHelper>;
     fn process<'a, F>(
         &self,
-        mut crop_images: Vec<ImageHelper>,
+        crop_images: &'a mut Vec<ImageHelper>,
         mut worker_fun: F,
     ) -> RettoResult<Self::FinalResult>
     where
         F: FnMut(Self::PreProcessOutput<'a>) -> RettoResult<Self::PostProcessInput<'a>>,
     {
-        let mut final_res: Vec<Option<ClsProcessorSingleResult>> =
-            Vec::with_capacity(crop_images.len());
-        final_res.resize_with(crop_images.len(), || None);
+        let mut final_res: Vec<ClsProcessorSingleResult> = Vec::with_capacity(crop_images.len());
+        final_res.resize_with(crop_images.len(), || ClsProcessorSingleResult::default());
         let mut image_index_asc_size: Vec<usize> = (0..crop_images.len()).collect();
         image_index_asc_size.sort_by_key(|&i| Reverse(OrderedFloat(crop_images[i].ori_ratio())));
         let batched = image_index_asc_size
-            .par_chunks(self.config.batch_num)
+            .chunks(self.config.batch_num)
             .map(|batch| {
                 let mats = batch
                     .iter()
                     .map(|&i| {
                         crop_images[i]
-                            .resize_norm_image(self.config.image_shape)
+                            .resize_norm_image(self.config.image_shape, None)
                             .insert_axis(Axis(0))
                     })
                     .collect::<Vec<_>>();
@@ -147,24 +145,18 @@ impl<'p> Processor for ClsProcessor<'p> {
             .into_iter()
             .try_for_each(|(batch_idxs, norm_img_batch)| {
                 let worker_res = worker_fun(norm_img_batch)?;
-                let post_processed = self.postprocess(worker_res)?;
+                let post_processed = self.postprocess(worker_res, ())?;
                 batch_idxs
                     .iter()
                     .zip(post_processed)
                     .try_for_each(|(&idx, label)| {
-                        let mut inner = crop_images[idx].take_inner().unwrap();
                         if label.label == 180 && label.score >= self.config.thresh {
-                            rotate180_in_place(&mut inner);
+                            crop_images[idx].rotate_180_in_place()?;
                         }
-                        final_res[idx] = Some(ClsProcessorSingleResult {
-                            image: inner,
-                            label,
-                        });
+                        final_res[idx].label = label;
                         Ok::<(), RettoError>(())
                     })
             })?;
-        Ok(ClsProcessorResult(
-            final_res.into_iter().map(|x| x.unwrap()).collect(),
-        ))
+        Ok(ClsProcessorResult(final_res))
     }
 }
