@@ -50,7 +50,8 @@ where
     pub fn new(cfg: RettoSessionConfig<W>) -> RettoResult<Self> {
         // load dict
         let worker = W::new(cfg.worker_config.clone())?; // TODO:
-        let rec_character = RecCharacter::new(&cfg.rec_processor_config.character_path, vec![0])?;
+        let rec_character =
+            RecCharacter::new(cfg.rec_processor_config.character_source.clone(), vec![0])?;
         worker.init()?;
         Ok(RettoSession {
             worker,

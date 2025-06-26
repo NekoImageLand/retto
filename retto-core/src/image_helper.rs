@@ -94,7 +94,7 @@ impl ImageHelper {
         (h as f64) / (w as f64)
     }
 
-    pub fn array_view(&self) -> RettoResult<ArrayView3<u8>> {
+    pub fn array_view(&self) -> RettoResult<ArrayView3<'_, u8>> {
         let image = self.inner.as_ref().unwrap();
         let (w, h) = image.dimensions();
         Ok(ArrayView3::from_shape(

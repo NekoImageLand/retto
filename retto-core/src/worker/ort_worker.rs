@@ -1,11 +1,14 @@
-use crate::error::RettoResult;
-use crate::worker::{RettoInnerWorker, RettoWorker};
+use crate::error::{RettoError, RettoResult};
+use crate::worker::{RettoInnerWorker, RettoWorker, RettoWorkerModelProvider};
 use ndarray::prelude::*;
-use ort::execution_providers::ArenaExtendStrategy::NextPowerOfTwo;
-use ort::execution_providers::cuda::CuDNNConvAlgorithmSearch::Exhaustive;
+#[cfg(feature = "backend-ort-directml")]
+use ort::execution_providers::DirectMLExecutionProvider;
+#[cfg(feature = "backend-ort-cuda")]
 use ort::execution_providers::{
-    CPUExecutionProvider, CUDAExecutionProvider, DirectMLExecutionProvider,
+    ArenaExtendStrategy::NextPowerOfTwo, CUDAExecutionProvider,
+    cuda::CuDNNConvAlgorithmSearch::Exhaustive,
 };
+use ort::execution_providers::{CPUExecutionProvider, ExecutionProviderDispatch};
 use ort::value::TensorRef;
 
 #[derive(Debug, Default, Clone)]
@@ -14,17 +17,19 @@ pub enum RettoOrtWorkerDeviceConfig {
     /// Use CPU Only
     CPU,
     /// Use CUDA with the specified device ID
+    #[cfg(feature = "backend-ort-cuda")]
     Cuda(i32),
     /// Use DirectML with the specified device ID
+    #[cfg(feature = "backend-ort-directml")]
     DirectML(i32),
 }
 
 #[derive(Debug, Default, Clone)]
 pub struct RettoOrtWorkerConfig {
     pub device: RettoOrtWorkerDeviceConfig,
-    pub det_model_path: String,
-    pub rec_model_path: String,
-    pub cls_model_path: String,
+    pub det_model_source: RettoWorkerModelProvider,
+    pub rec_model_source: RettoWorkerModelProvider,
+    pub cls_model_source: RettoWorkerModelProvider,
 }
 
 #[derive(Debug)]
@@ -35,6 +40,22 @@ pub struct RettoOrtWorker {
     cls_session: ort::session::Session,
 }
 
+fn build_ort_session(
+    model_source: RettoWorkerModelProvider,
+    providers: &[ExecutionProviderDispatch],
+) -> RettoResult<ort::session::Session> {
+    let mut builder = ort::session::Session::builder()?.with_execution_providers(providers)?;
+    match model_source {
+        #[cfg(not(target_arch = "wasm32"))]
+        RettoWorkerModelProvider::Path(path) => builder
+            .commit_from_file(path)
+            .map_err(|e| RettoError::from(e)),
+        RettoWorkerModelProvider::Blob(blob) => builder
+            .commit_from_memory(&blob)
+            .map_err(|e| RettoError::from(e)),
+    }
+}
+
 impl RettoWorker for RettoOrtWorker {
     type RettoWorkerConfig = RettoOrtWorkerConfig;
     fn new(cfg: Self::RettoWorkerConfig) -> RettoResult<Self>
@@ -43,6 +64,7 @@ impl RettoWorker for RettoOrtWorker {
     {
         let mut providers = Vec::new();
         match cfg.device {
+            #[cfg(feature = "backend-ort-cuda")]
             RettoOrtWorkerDeviceConfig::Cuda(id) => providers.push(
                 CUDAExecutionProvider::default()
                     .with_arena_extend_strategy(NextPowerOfTwo)
@@ -50,6 +72,7 @@ impl RettoWorker for RettoOrtWorker {
                     .with_device_id(id)
                     .build(),
             ),
+            #[cfg(feature = "backend-ord-directml")]
             RettoOrtWorkerDeviceConfig::DirectML(id) => providers.push(
                 DirectMLExecutionProvider::default()
                     .with_device_id(id)
@@ -58,15 +81,9 @@ impl RettoWorker for RettoOrtWorker {
             _ => {}
         };
         providers.push(CPUExecutionProvider::default().build());
-        let det_session = ort::session::Session::builder()?
-            .with_execution_providers(providers.as_slice())?
-            .commit_from_file(cfg.det_model_path.clone())?;
-        let cls_session = ort::session::Session::builder()?
-            .with_execution_providers(providers.as_slice())?
-            .commit_from_file(cfg.cls_model_path.clone())?;
-        let rec_session = ort::session::Session::builder()?
-            .with_execution_providers(providers.as_slice())?
-            .commit_from_file(cfg.rec_model_path.clone())?;
+        let det_session = build_ort_session(cfg.det_model_source.clone(), &providers)?;
+        let cls_session = build_ort_session(cfg.cls_model_source.clone(), &providers)?;
+        let rec_session = build_ort_session(cfg.rec_model_source.clone(), &providers)?;
         let worker = RettoOrtWorker {
             cfg,
             det_session,

@@ -7,6 +7,14 @@ use ndarray_stats::QuantileExt;
 use ordered_float::OrderedFloat;
 use std::cmp::{Reverse, max};
 
+#[derive(Debug, Clone)]
+pub enum RecCharacterDictProvider {
+    #[cfg(not(target_arch = "wasm32"))]
+    Path(String),
+    Blob(Vec<u8>),
+    Inline(), // TODO: from onnx model itself?
+}
+
 #[derive(Debug)]
 pub(crate) struct RecCharacter {
     inner: Vec<String>,
@@ -14,8 +22,13 @@ pub(crate) struct RecCharacter {
 }
 
 impl RecCharacter {
-    pub fn new(dict_path: &str, ignored_tokens: Vec<usize>) -> RettoResult<Self> {
-        let content = std::fs::read_to_string(dict_path)?;
+    pub fn new(dict: RecCharacterDictProvider, ignored_tokens: Vec<usize>) -> RettoResult<Self> {
+        let content = match dict {
+            #[cfg(not(target_arch = "wasm32"))]
+            RecCharacterDictProvider::Path(path) => std::fs::read_to_string(path)?,
+            RecCharacterDictProvider::Blob(blob) => String::from_utf8(blob)?,
+            _ => todo!(),
+        };
         let mut dict: Vec<String> = content.lines().map(str::trim).map(str::to_owned).collect();
         // insert_special_char
         dict.push(" ".to_string());
@@ -78,17 +91,21 @@ impl RecCharacter {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RecProcessorConfig {
-    pub character_path: String,
+    pub character_source: RecCharacterDictProvider,
     pub image_shape: [usize; 3],
     pub batch_num: usize,
 }
 
 impl Default for RecProcessorConfig {
     fn default() -> Self {
+        #[cfg(not(target_arch = "wasm32"))]
+        let character_source = RecCharacterDictProvider::Path("ppocr_keys_v1.txt".into());
+        #[cfg(target_arch = "wasm32")]
+        let character_source = RecCharacterDictProvider::Blob(Vec::new());
         RecProcessorConfig {
-            character_path: String::from("ppocr_keys_v1.txt"),
+            character_source,
             image_shape: [3, 48, 320],
             batch_num: 6,
         }

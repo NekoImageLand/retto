@@ -8,6 +8,8 @@ pub enum RettoError {
     ShapeError(#[from] ndarray::ShapeError),
     #[error(transparent)]
     OrtError(#[from] ort::error::Error),
+    #[error(transparent)]
+    Utf8Error(#[from] std::string::FromUtf8Error),
 }
 
 pub type RettoResult<T> = Result<T, RettoError>;

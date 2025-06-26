@@ -1,0 +1,7 @@
+[package]
+name = "retto-wasi"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+retto-core = { path = "../retto-core", features = ["backend-ort-wasi"] }

@@ -316,8 +316,7 @@ checksum = "b94f61472cee1439c0b966b47e3aca9ae07e45d070759512cd390ea2bebc6675"
 [[package]]
 name = "clipper-sys"
 version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5141c32419064aef7322f754b92fd4ea53c360c1ad984ec38b58af533eba3ac"
+source = "git+https://github.com/NekoImageLand/clipper-sys?branch=master#20e9dc5266c48416f8497724ca22afd4282e5e29"
 dependencies = [
  "cc",
 ]
@@ -1674,10 +1673,18 @@ dependencies = [
  "num-traits",
  "ordered-float",
  "ort",
+ "ort-sys",
  "paste",
  "rayon",
  "thiserror 2.0.12",
  "tracing",
+]
+
+[[package]]
+name = "retto-wasi"
+version = "0.1.0"
+dependencies = [
+ "retto-core",
 ]
 
 [[package]]

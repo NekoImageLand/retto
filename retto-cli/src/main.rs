@@ -29,9 +29,9 @@ fn main() -> anyhow::Result<()> {
     let cfg: RettoSessionConfig<RettoOrtWorker> = RettoSessionConfig {
         worker_config: RettoOrtWorkerConfig {
             device: RettoOrtWorkerDeviceConfig::Cuda(0),
-            det_model_path: cli.det_model_path,
-            rec_model_path: cli.rec_model_path,
-            cls_model_path: cli.cls_model_path,
+            det_model_source: RettoWorkerModelProvider::Path(cli.det_model_path),
+            rec_model_source: RettoWorkerModelProvider::Path(cli.rec_model_path),
+            cls_model_source: RettoWorkerModelProvider::Path(cli.cls_model_path),
         },
         ..Default::default()
     };

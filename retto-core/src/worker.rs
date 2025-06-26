@@ -4,6 +4,19 @@ use crate::error::RettoResult;
 use ndarray::prelude::*;
 use std::fmt::Debug;
 
+#[derive(Debug, Clone)]
+pub enum RettoWorkerModelProvider {
+    #[cfg(not(target_arch = "wasm32"))]
+    Path(String),
+    Blob(Vec<u8>),
+}
+
+impl Default for RettoWorkerModelProvider {
+    fn default() -> Self {
+        RettoWorkerModelProvider::Blob(Vec::new())
+    }
+}
+
 // TODO: Split each worker into different cases so that GAT can be fully utilised,
 // TODO: and take advantage of the metadata functionality of the ONNX model
 pub(crate) trait RettoInnerWorker {
@@ -21,5 +34,6 @@ pub trait RettoWorker: RettoInnerWorker {
 }
 
 pub mod prelude {
+    pub use super::RettoWorkerModelProvider;
     pub use super::ort_worker::*;
 }

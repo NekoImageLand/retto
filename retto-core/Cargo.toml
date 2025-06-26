@@ -17,5 +17,12 @@ fast_image_resize.workspace = true
 geo.workspace = true
 geo-types.workspace = true
 geo-clipper.workspace = true
-ort.workspace = true
+ort = {workspace = true, default-features = false}
+ort-sys = {workspace = true, default-features = false}
 tracing.workspace = true
+
+[features]
+backend-ort = ["ort/std", "ort/ndarray", "ort/tracing", "ort/download-binaries", "ort/copy-dylibs"]
+backend-ort-cuda = ["backend-ort", "ort/cuda"]
+backend-ort-directml = ["backend-ort"]
+backend-ort-wasi = ["backend-ort"]

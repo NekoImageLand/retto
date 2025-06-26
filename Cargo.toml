@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["retto-cli", "retto-core"]
+members = ["retto-cli", "retto-core", "retto-wasi"]
 
 [workspace.package]
 version = "0.1.0"
@@ -23,9 +23,13 @@ fast_image_resize = { version = "5.1.4", features = ["image"] }
 geo = "0.30.0"
 geo-types = "0.7.16"
 geo-clipper = "0.9.0"
-ort = { version = "2.0.0-rc.10", features = ["cuda"] }
+ort = { version = "=2.0.0-rc.10", default-features = false }
+ort-sys = { version = "=2.0.0-rc.10", default-features = false }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+
+[patch.crates-io]
+clipper-sys = { git = "https://github.com/NekoImageLand/clipper-sys", branch = "master" }
 
 [profile.release]
 opt-level = 2

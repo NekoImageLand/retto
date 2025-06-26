@@ -10,3 +10,8 @@ anyhow.workspace = true
 clap.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+
+[features]
+backend-ort-cpu = ["retto-core/backend-ort"]
+backend-ort-cuda = ["retto-core/backend-ort-cuda"]
+backend-ort-directml = ["retto-core/backend-ort-directml"]
