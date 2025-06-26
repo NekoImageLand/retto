@@ -28,7 +28,13 @@ fn main() -> anyhow::Result<()> {
     tracing_subscriber::registry().with(stdout).init();
     let cfg: RettoSessionConfig<RettoOrtWorker> = RettoSessionConfig {
         worker_config: RettoOrtWorkerConfig {
+            // TODO: dynamic adjust
+            #[cfg(feature = "backend-ort-cuda")]
             device: RettoOrtWorkerDeviceConfig::Cuda(0),
+            #[cfg(feature = "backend-ort-directml")]
+            device: RettoOrtWorkerDeviceConfig::DirectML(0),
+            #[cfg(feature = "backend-ort-cpu")]
+            device: RettoOrtWorkerDeviceConfig::CPU,
             det_model_source: RettoWorkerModelProvider::Path(cli.det_model_path),
             rec_model_source: RettoWorkerModelProvider::Path(cli.rec_model_path),
             cls_model_source: RettoWorkerModelProvider::Path(cli.cls_model_path),

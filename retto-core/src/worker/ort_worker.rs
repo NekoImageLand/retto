@@ -62,6 +62,14 @@ impl RettoWorker for RettoOrtWorker {
     where
         Self: Sized,
     {
+        #[cfg(target_arch = "wasm32")]
+        {
+            println!("Initializing ort in wasi...");
+            ort::init()
+                .with_global_thread_pool(ort::environment::GlobalThreadPoolOptions::default())
+                .commit()
+                .expect("Cannot initialize ort.");
+        }
         let mut providers = Vec::new();
         match cfg.device {
             #[cfg(feature = "backend-ort-cuda")]
