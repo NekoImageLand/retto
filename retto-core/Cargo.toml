@@ -6,6 +6,8 @@ edition = "2024"
 [dependencies]
 paste.workspace = true
 thiserror.workspace = true
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
 rayon.workspace = true
 ordered-float.workspace = true
 num-traits.workspace = true
@@ -17,12 +19,13 @@ fast_image_resize.workspace = true
 geo.workspace = true
 geo-types.workspace = true
 geo-clipper.workspace = true
-ort = {workspace = true, default-features = false}
-ort-sys = {workspace = true, default-features = false}
+ort = { workspace = true, default-features = false }
+ort-sys = { workspace = true, default-features = false }
 tracing.workspace = true
 
 [features]
-backend-ort = ["ort/std", "ort/ndarray", "ort/tracing", "ort/download-binaries", "ort/copy-dylibs"]
+serde = ["serde/default", "serde_json/default", "ordered-float/serde", "ndarray/serde"]
+backend-ort = ["ort/default"]
 backend-ort-cuda = ["backend-ort", "ort/cuda"]
 backend-ort-directml = ["backend-ort"]
 backend-ort-wasi = ["backend-ort"]

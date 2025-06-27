@@ -14,9 +14,12 @@ use imageproc::point::Point as ImagePoint;
 use ndarray::prelude::*;
 use num_traits::{AsPrimitive, Num, NumCast, Signed};
 use ordered_float::OrderedFloat;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
 #[derive(Debug, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ScoreMode {
     Slow,
     #[default]
@@ -24,6 +27,7 @@ pub enum ScoreMode {
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum LimitType {
     #[default]
     Min,
@@ -31,6 +35,7 @@ pub enum LimitType {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DetProcessorConfig {
     /// Preprocess
     pub limit_side_len: usize,
@@ -79,6 +84,7 @@ pub(crate) struct DetProcessor<'p> {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DetProcessorResult(pub Vec<(PointBox<OrderedFloat<f64>>, f32)>);
 
 impl ProcessorInnerRes for DetProcessor<'_> {

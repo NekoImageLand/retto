@@ -1,10 +1,19 @@
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use retto_core::prelude::*;
 use std::fs;
 use std::time::Instant;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::prelude::*;
 use walkdir::WalkDir;
+
+#[derive(ValueEnum, Clone, Debug)]
+pub enum DeviceKind {
+    Cpu,
+    #[cfg(feature = "backend-ort-cuda")]
+    Cuda,
+    #[cfg(feature = "backend-ort-directml")]
+    DirectMl,
+}
 
 #[derive(Parser, Debug)]
 #[command(name = "ratio-cli", version)]
@@ -19,6 +28,10 @@ pub struct Cli {
     rec_keys_path: String,
     #[arg(short, long)]
     images: String,
+    #[arg(long, value_enum, default_value_t = DeviceKind::Cpu)]
+    device: DeviceKind,
+    #[arg(long, default_value_t = 0)]
+    device_id: i32,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -28,13 +41,13 @@ fn main() -> anyhow::Result<()> {
     tracing_subscriber::registry().with(stdout).init();
     let cfg: RettoSessionConfig<RettoOrtWorker> = RettoSessionConfig {
         worker_config: RettoOrtWorkerConfig {
-            // TODO: dynamic adjust
-            #[cfg(feature = "backend-ort-cuda")]
-            device: RettoOrtWorkerDeviceConfig::Cuda(0),
-            #[cfg(feature = "backend-ort-directml")]
-            device: RettoOrtWorkerDeviceConfig::DirectML(0),
-            #[cfg(feature = "backend-ort-cpu")]
-            device: RettoOrtWorkerDeviceConfig::CPU,
+            device: match cli.device {
+                DeviceKind::Cpu => RettoOrtWorkerDeviceConfig::CPU,
+                #[cfg(feature = "backend-ort-cuda")]
+                DeviceKind::Cuda => RettoOrtWorkerDeviceConfig::Cuda(cli.device_id),
+                #[cfg(feature = "backend-ort-directml")]
+                DeviceKind::DirectMl => RettoOrtWorkerDeviceConfig::DirectML(cli.device_id),
+            },
             det_model_source: RettoWorkerModelProvider::Path(cli.det_model_path),
             rec_model_source: RettoWorkerModelProvider::Path(cli.rec_model_path),
             cls_model_source: RettoWorkerModelProvider::Path(cli.cls_model_path),

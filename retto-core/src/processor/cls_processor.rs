@@ -5,10 +5,13 @@ use ndarray::concatenate;
 use ndarray::prelude::*;
 use ndarray_stats::QuantileExt;
 use ordered_float::OrderedFloat;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
 use std::fmt::Display;
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ClsProcessorConfig {
     pub image_shape: [usize; 3],
     pub batch_num: usize,
@@ -33,12 +36,14 @@ pub(crate) struct ClsProcessor<'p> {
 }
 
 #[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ClsPostProcessLabel {
     pub label: u16,
     pub score: f32,
 }
 
 #[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ClsProcessorSingleResult {
     pub label: ClsPostProcessLabel,
 }
@@ -52,6 +57,7 @@ impl Display for ClsProcessorSingleResult {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ClsProcessorResult(pub Vec<ClsProcessorSingleResult>);
 
 impl Display for ClsProcessorResult {

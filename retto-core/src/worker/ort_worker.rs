@@ -10,8 +10,10 @@ use ort::execution_providers::{
 };
 use ort::execution_providers::{CPUExecutionProvider, ExecutionProviderDispatch};
 use ort::value::TensorRef;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum RettoOrtWorkerDeviceConfig {
     #[default]
     /// Use CPU Only
@@ -25,6 +27,7 @@ pub enum RettoOrtWorkerDeviceConfig {
 }
 
 #[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RettoOrtWorkerConfig {
     pub device: RettoOrtWorkerDeviceConfig,
     pub det_model_source: RettoWorkerModelProvider,
@@ -44,7 +47,7 @@ fn build_ort_session(
     model_source: RettoWorkerModelProvider,
     providers: &[ExecutionProviderDispatch],
 ) -> RettoResult<ort::session::Session> {
-    let mut builder = ort::session::Session::builder()?.with_execution_providers(providers)?;
+    let builder = ort::session::Session::builder()?.with_execution_providers(providers)?;
     match model_source {
         #[cfg(not(target_arch = "wasm32"))]
         RettoWorkerModelProvider::Path(path) => builder
@@ -64,7 +67,7 @@ impl RettoWorker for RettoOrtWorker {
     {
         #[cfg(target_arch = "wasm32")]
         {
-            println!("Initializing ort in wasi...");
+            tracing::debug!("Initializing ort in wasi...");
             ort::init()
                 .with_global_thread_pool(ort::environment::GlobalThreadPoolOptions::default())
                 .commit()
@@ -80,7 +83,7 @@ impl RettoWorker for RettoOrtWorker {
                     .with_device_id(id)
                     .build(),
             ),
-            #[cfg(feature = "backend-ord-directml")]
+            #[cfg(feature = "backend-ort-directml")]
             RettoOrtWorkerDeviceConfig::DirectML(id) => providers.push(
                 DirectMLExecutionProvider::default()
                     .with_device_id(id)

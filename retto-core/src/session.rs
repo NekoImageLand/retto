@@ -2,6 +2,8 @@ use crate::error::RettoResult;
 use crate::image_helper::ImageHelper;
 use crate::processor::prelude::*;
 use crate::worker::RettoWorker;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug)]
 pub struct RettoSession<W: RettoWorker> {
@@ -11,6 +13,7 @@ pub struct RettoSession<W: RettoWorker> {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RettoSessionConfig<W: RettoWorker> {
     pub worker_config: W::RettoWorkerConfig,
     pub max_side_len: usize,
@@ -37,6 +40,7 @@ where
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RettoWorkerResult {
     pub det_result: DetProcessorResult,
     pub cls_result: ClsProcessorResult,

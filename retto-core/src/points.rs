@@ -1,8 +1,18 @@
 use imageproc::point::Point as ImagePoint;
 use num_traits::{AsPrimitive, Num, NumCast, Signed};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
 #[derive(Debug, Copy, Clone)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(bound(
+        serialize = "T: serde::Serialize",
+        deserialize = "T: serde::de::Deserialize<'de>"
+    ))
+)]
 pub struct Point<T>
 where
     T: Num + NumCast + Signed + Copy + Ord + Debug,
@@ -29,6 +39,14 @@ where
     }
 }
 
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(bound(
+        serialize = "T: serde::Serialize",
+        deserialize = "T: serde::de::Deserialize<'de>"
+    ))
+)]
 pub struct PointBox<T>
 where
     T: Num + NumCast + Signed + Copy + Ord + Debug,

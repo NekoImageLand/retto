@@ -1,10 +1,14 @@
 pub mod ort_worker;
 
+use crate::MaybeSerde;
 use crate::error::RettoResult;
 use ndarray::prelude::*;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum RettoWorkerModelProvider {
     #[cfg(not(target_arch = "wasm32"))]
     Path(String),
@@ -26,7 +30,7 @@ pub(crate) trait RettoInnerWorker {
 }
 
 pub trait RettoWorker: RettoInnerWorker {
-    type RettoWorkerConfig: Debug + Default + Clone;
+    type RettoWorkerConfig: Debug + Default + Clone + MaybeSerde;
     fn new(cfg: Self::RettoWorkerConfig) -> RettoResult<Self>
     where
         Self: Sized;

@@ -5,9 +5,12 @@ use ndarray::prelude::*;
 use ndarray::{Zip, concatenate};
 use ndarray_stats::QuantileExt;
 use ordered_float::OrderedFloat;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use std::cmp::{Reverse, max};
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum RecCharacterDictProvider {
     #[cfg(not(target_arch = "wasm32"))]
     Path(String),
@@ -16,6 +19,7 @@ pub enum RecCharacterDictProvider {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub(crate) struct RecCharacter {
     inner: Vec<String>,
     ignored_tokens: Vec<usize>,
@@ -92,6 +96,7 @@ impl RecCharacter {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RecProcessorConfig {
     pub character_source: RecCharacterDictProvider,
     pub image_shape: [usize; 3],
@@ -125,6 +130,7 @@ impl<'a> RecProcessor<'a> {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RecProcessorSingleResult {
     pub text: String,
     pub score: f32,
@@ -132,6 +138,7 @@ pub struct RecProcessorSingleResult {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RecProcessorResult(pub Vec<RecProcessorSingleResult>);
 
 impl ProcessorInnerRes for RecProcessor<'_> {
@@ -143,9 +150,6 @@ pub(crate) struct PostProcessExtraInput {
     wh_ratios: Vec<OrderedFloat<f32>>,
     max_wh_ratio: OrderedFloat<f32>,
 }
-
-#[derive(Debug)]
-struct PostProcessOutput;
 
 impl ProcessorInnerIO for RecProcessor<'_> {
     type PreProcessInput<'ppl> = Array4<f32>;
