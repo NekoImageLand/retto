@@ -3,5 +3,14 @@ name = "retto-wasi"
 version.workspace = true
 edition.workspace = true
 
+[[bin]]
+path = "src/main.rs"
+name = "retto_wasi"
+
+
 [dependencies]
-retto-core = { path = "../retto-core", features = ["backend-ort-wasi"] }
+retto-core = { path = "../retto-core", features = ["serde", "backend-ort-wasi"] }
+once_cell.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
