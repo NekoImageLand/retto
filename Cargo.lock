@@ -316,7 +316,7 @@ checksum = "b94f61472cee1439c0b966b47e3aca9ae07e45d070759512cd390ea2bebc6675"
 [[package]]
 name = "clipper-sys"
 version = "0.8.0"
-source = "git+https://github.com/NekoImageLand/clipper-sys?branch=master#20e9dc5266c48416f8497724ca22afd4282e5e29"
+source = "git+https://github.com/NekoImageLand/clipper-sys?branch=master#4f102a80121063fec2cfc235039cfa7b74c5781a"
 dependencies = [
  "cc",
 ]

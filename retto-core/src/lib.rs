@@ -14,6 +14,8 @@ pub(crate) trait MaybeSerde: Serialize + for<'a> Deserialize<'a> {}
 impl<T> MaybeSerde for T where T: serde::Serialize + for<'de> serde::Deserialize<'de> {}
 #[cfg(not(feature = "serde"))]
 pub(crate) trait MaybeSerde {}
+#[cfg(not(feature = "serde"))]
+impl<T> MaybeSerde for T {}
 
 pub mod prelude {
     pub use crate::error::{RettoError, RettoResult};

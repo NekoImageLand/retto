@@ -37,3 +37,6 @@ clipper-sys = { git = "https://github.com/NekoImageLand/clipper-sys", branch = "
 opt-level = 2
 lto = true
 codegen-units = 1
+
+[profile.release.package.retto-wasi]
+opt-level = "s"

@@ -10,6 +10,7 @@ use ort::execution_providers::{
 };
 use ort::execution_providers::{CPUExecutionProvider, ExecutionProviderDispatch};
 use ort::value::TensorRef;
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Clone)]

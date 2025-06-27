@@ -1,7 +1,9 @@
 target/
 .idea/
 .vscode/
+lib/
 *.onnx
 *.png
 *.jpg
 *.txt
+*.py
