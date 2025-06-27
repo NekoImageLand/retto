@@ -37,7 +37,7 @@ pub struct Cli {
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     let stdout = tracing_subscriber::fmt::layer()
-        .with_filter(EnvFilter::new("ort=warn,retto_core=debug,retto_cli=debug"));
+        .with_filter(EnvFilter::new("ort=debug,retto_core=debug,retto_cli=debug"));
     tracing_subscriber::registry().with(stdout).init();
     let cfg: RettoSessionConfig<RettoOrtWorker> = RettoSessionConfig {
         worker_config: RettoOrtWorkerConfig {

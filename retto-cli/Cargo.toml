@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-retto-core = { path = "../retto-core", features = ["serde"] }
+retto-core = { path = "../retto-core", features = ["serde", "backend-ort"] }
 walkdir.workspace = true
 anyhow.workspace = true
 clap.workspace = true
@@ -13,6 +13,5 @@ tracing-subscriber.workspace = true
 serde_json.workspace = true
 
 [features]
-backend-ort-cpu = ["retto-core/backend-ort"]
 backend-ort-cuda = ["retto-core/backend-ort-cuda"]
 backend-ort-directml = ["retto-core/backend-ort-directml"]
