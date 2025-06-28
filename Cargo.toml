@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["retto-cli", "retto-core", "retto-wasi"]
+members = ["retto-cli", "retto-core", "retto-wasm"]
 
 [workspace.package]
 version = "0.1.0"
