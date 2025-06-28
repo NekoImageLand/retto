@@ -49,7 +49,7 @@ fn build_ort_session(
 ) -> RettoResult<ort::session::Session> {
     let builder = ort::session::Session::builder()?.with_execution_providers(providers)?;
     match model_source {
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(not(target_family = "wasm"))]
         RettoWorkerModelProvider::Path(path) => builder
             .commit_from_file(path)
             .map_err(|e| RettoError::from(e)),
@@ -65,7 +65,7 @@ impl RettoWorker for RettoOrtWorker {
     where
         Self: Sized,
     {
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(target_family = "wasm")]
         {
             tracing::debug!("Initializing ort in wasi...");
             ort::init()

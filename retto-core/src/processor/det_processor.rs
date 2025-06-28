@@ -247,10 +247,9 @@ impl ProcessorInner for DetProcessor<'_> {
         Ok(input)
     }
 
-    // TODO:
-    // Check for precision alignment issues with the Python implementation,
-    // especially before and after find_contours (since find_contours never uses floating point
-    // numbers internally and is not fully consistent with the opencv implementation).
+    // TODO: Check for precision alignment issues with the Python implementation,
+    // TODO: especially before and after find_contours (since find_contours never uses floating point
+    // TODO: numbers internally and is not fully consistent with the opencv implementation).
     fn postprocess<'a>(
         &self,
         input: Self::PostProcessInput<'a>,
@@ -265,7 +264,6 @@ impl ProcessorInner for DetProcessor<'_> {
         if let Some(ref k) = self.dilation_kernel {
             mask = grayscale_dilate(&mut mask, k);
         }
-        // TODO: need check find_contours's output!
         let mut boxes_pair: Vec<_> = find_contours::<i32>(&mask)
             .iter()
             .filter_map(|contour| {

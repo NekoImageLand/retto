@@ -11,7 +11,7 @@ use std::cmp::{Reverse, max};
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum RecCharacterDictProvider {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(target_family = "wasm"))]
     Path(String),
     Blob(Vec<u8>),
     Inline(), // TODO: from onnx model itself?
@@ -27,10 +27,10 @@ pub(crate) struct RecCharacter {
 impl RecCharacter {
     pub fn new(dict: RecCharacterDictProvider, ignored_tokens: Vec<usize>) -> RettoResult<Self> {
         let content = match dict {
-            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(not(target_family = "wasm"))]
             RecCharacterDictProvider::Path(path) => std::fs::read_to_string(path)?,
             RecCharacterDictProvider::Blob(blob) => String::from_utf8(blob)?,
-            _ => todo!(),
+            RecCharacterDictProvider::Inline() => todo!("Load dict from onnx model itself!"),
         };
         let mut dict: Vec<String> = content.lines().map(str::trim).map(str::to_owned).collect();
         // insert_special_char
@@ -104,9 +104,9 @@ pub struct RecProcessorConfig {
 
 impl Default for RecProcessorConfig {
     fn default() -> Self {
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(not(target_family = "wasm"))]
         let character_source = RecCharacterDictProvider::Path("ppocr_keys_v1.txt".into());
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(target_family = "wasm")]
         let character_source = RecCharacterDictProvider::Blob(Vec::new());
         RecProcessorConfig {
             character_source,

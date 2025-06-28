@@ -8,7 +8,7 @@ use std::fmt::Debug;
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum RettoWorkerModelProvider {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(target_family = "wasm"))]
     Path(String),
     Blob(Vec<u8>),
 }
