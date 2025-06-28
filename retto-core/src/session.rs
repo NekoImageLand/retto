@@ -1,9 +1,8 @@
 use crate::error::RettoResult;
 use crate::image_helper::ImageHelper;
 use crate::processor::prelude::*;
+use crate::serde::*;
 use crate::worker::RettoWorker;
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug)]
 pub struct RettoSession<W: RettoWorker> {

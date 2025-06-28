@@ -1,10 +1,8 @@
 pub mod ort_worker;
 
-use crate::MaybeSerde;
 use crate::error::RettoResult;
+use crate::serde::*;
 use ndarray::prelude::*;
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
 #[derive(Debug, Clone)]

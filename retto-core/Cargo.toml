@@ -20,7 +20,7 @@ geo.workspace = true
 geo-types.workspace = true
 geo-clipper.workspace = true
 ort = { workspace = true, default-features = false }
-ort-sys = { workspace = true, default-features = false }
+ort-sys = { workspace = true, default-features = false } # https://github.com/pykeio/ort/issues/399
 tracing.workspace = true
 
 [features]

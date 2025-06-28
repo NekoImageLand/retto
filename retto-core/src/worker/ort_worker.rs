@@ -1,4 +1,5 @@
 use crate::error::{RettoError, RettoResult};
+use crate::serde::*;
 use crate::worker::{RettoInnerWorker, RettoWorker, RettoWorkerModelProvider};
 use ndarray::prelude::*;
 #[cfg(feature = "backend-ort-directml")]
@@ -10,8 +11,6 @@ use ort::execution_providers::{
 };
 use ort::execution_providers::{CPUExecutionProvider, ExecutionProviderDispatch};
 use ort::value::TensorRef;
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

@@ -1,7 +1,6 @@
+use crate::serde::*;
 use imageproc::point::Point as ImagePoint;
 use num_traits::{AsPrimitive, Num, NumCast, Signed};
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
 #[derive(Debug, Copy, Clone)]

@@ -2,6 +2,7 @@ use crate::error::RettoResult;
 use crate::image_helper::ImageHelper;
 use crate::points::{Point, PointBox};
 use crate::processor::{Processor, ProcessorInner, ProcessorInnerIO, ProcessorInnerRes};
+use crate::serde::*;
 use geo::prelude::*;
 use geo_clipper::{Clipper, EndType, JoinType};
 use geo_types::{Coord, LineString, Polygon};
@@ -14,8 +15,6 @@ use imageproc::point::Point as ImagePoint;
 use ndarray::prelude::*;
 use num_traits::{AsPrimitive, Num, NumCast, Signed};
 use ordered_float::OrderedFloat;
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
 #[derive(Debug, Default, PartialEq, Eq)]

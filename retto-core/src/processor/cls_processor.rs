@@ -1,12 +1,11 @@
 use crate::error::{RettoError, RettoResult};
 use crate::image_helper::ImageHelper;
 use crate::processor::{Processor, ProcessorInner, ProcessorInnerIO, ProcessorInnerRes};
+use crate::serde::*;
 use ndarray::concatenate;
 use ndarray::prelude::*;
 use ndarray_stats::QuantileExt;
 use ordered_float::OrderedFloat;
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
 use std::fmt::Display;
 
