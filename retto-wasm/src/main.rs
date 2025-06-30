@@ -1,11 +1,14 @@
 #![no_main]
+#![feature(concat_bytes)]
+#![feature(linkage)]
+
+mod macros;
 
 use once_cell::sync::Lazy;
 use retto_core::prelude::*;
-use std::alloc;
-use std::ffi::{CString, c_char};
-use std::os::raw::c_void;
+use std::ffi::{CString, c_char, c_uint, c_void};
 use std::sync::Mutex;
+use std::{alloc, thread};
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::prelude::*;
 
@@ -60,16 +63,36 @@ pub extern "C" fn dealloc(ptr: *mut c_void, size: usize) {
     }
 }
 
+em_js!((), retto_notify_done, (msg: *const char), {
+    if (Module.onRettoNotifyDone) {
+        Module.onRettoNotifyDone(UTF8ToString(msg));
+    }
+});
+
+/// I'm too lazy qwq
+unsafe extern "C" {
+    fn emscripten_sync_run_in_main_runtime_thread_(sig: c_uint, func_ptr: *mut c_void, ...) -> i32;
+}
+
 #[unsafe(no_mangle)]
-pub extern "C" fn retto(image_data_ptr: *const u8, image_data_len: u32) -> *mut c_char {
-    Lazy::force(&GLOBAL_TRACING);
+pub extern "C" fn retto(image_data_ptr: *const u8, image_data_len: u32) {
     let image_data =
         unsafe { std::slice::from_raw_parts(image_data_ptr, image_data_len as usize).to_vec() };
-    let mut session = GLOBAL_SESSION
-        .lock()
-        .expect("Failed to lock RettoSession mutex");
-    let res = session.run(image_data).expect("Failed to run RettoSession");
-    let res_str = serde_json::to_string(&res).expect("Failed to serialize RettoSession");
-    let res_cstr = CString::new(res_str).expect("Failed to create CString");
-    res_cstr.into_raw()
+    thread::spawn(move || {
+        Lazy::force(&GLOBAL_TRACING);
+        let mut session = GLOBAL_SESSION
+            .lock()
+            .expect("Failed to lock RettoSession mutex");
+        let res = session.run(image_data).expect("Failed to run RettoSession");
+        let res_str = serde_json::to_string(&res).expect("Failed to serialize RettoSession");
+        let res_cstr = CString::new(res_str).expect("Failed to create CString");
+        let ptr: *mut c_char = res_cstr.into_raw();
+        unsafe {
+            emscripten_sync_run_in_main_runtime_thread_(
+                0 | 1 << 25 | 0 << (2 * 0), // aka EM_FUNC_SIG_VI, TODO: use enum
+                retto_notify_done as *mut c_void,
+                ptr as *const c_char,
+            );
+        }
+    });
 }
