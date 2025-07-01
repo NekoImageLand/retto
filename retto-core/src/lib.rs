@@ -1,3 +1,6 @@
+#![allow(unused_variables)]
+#![allow(private_bounds)]
+#![allow(dead_code)]
 pub mod error;
 #[cfg(feature = "hf-hub")]
 mod hf_hub_helper;

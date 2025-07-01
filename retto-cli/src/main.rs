@@ -49,6 +49,7 @@ fn main() -> anyhow::Result<()> {
         #[cfg(feature = "backend-ort-directml")]
         DeviceKind::DirectMl => RettoOrtWorkerDevice::DirectML(cli.device_id),
     };
+    #[allow(unused_mut)] // false positive due to dynamic target cfg
     let mut models = RettoOrtWorkerModelProvider(RettoWorkerModelProvider {
         det: RettoWorkerModelSource::Path(cli.det_model_path),
         rec: RettoWorkerModelSource::Path(cli.rec_model_path),

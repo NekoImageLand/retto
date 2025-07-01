@@ -148,7 +148,7 @@ impl ImageHelper {
     }
 
     pub fn resize_either(&mut self, limit_type: &LimitType, limit_len: usize) -> RettoResult<()> {
-        let image: Option<ImageBuffer<Rgb<u8>, Vec<u8>>> = Some(self.inner.take().unwrap());
+        let image: Option<ImageBuffer<Rgb<u8>, Vec<u8>>> = self.inner.take();
         let (w, h) = image.as_ref().unwrap().dimensions();
         let ratio = match limit_type {
             LimitType::Max => match max(w, h) > limit_len as u32 {
@@ -164,12 +164,12 @@ impl ImageHelper {
             (((h as f32 * ratio).floor() / 32.0).round() as u32) * 32,
             (((w as f32 * ratio).floor() / 32.0).round() as u32) * 32,
         );
-        self.inner = Some(imageops::thumbnail(
-            &image.unwrap(),
-            resize_w,
-            resize_h,
-            // FilterType::Triangle,
-        ));
+        self.inner = image.map(|img| {
+            imageops::thumbnail(
+                &img, resize_w, resize_h,
+                // FilterType::Triangle,
+            )
+        });
         Ok(())
     }
 

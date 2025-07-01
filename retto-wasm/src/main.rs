@@ -49,19 +49,22 @@ pub extern "C" fn dealloc(ptr: *mut c_void, size: usize) {
     }
 }
 
-em_js!((), retto_notify_done, (msg: *const char), {
+em_js!((), retto_notify_done, (msg: *const c_char), {
     if (Module.onRettoNotifyDone) {
         Module.onRettoNotifyDone(UTF8ToString(msg));
     }
 });
 
-/// I'm too lazy qwq
+// I'm too lazy qwq
 unsafe extern "C" {
     fn emscripten_sync_run_in_main_runtime_thread_(sig: c_uint, func_ptr: *mut c_void, ...) -> i32;
 }
 
+#[allow(clippy::erasing_op, clippy::identity_op)] // simulate C macro behavior
 #[unsafe(no_mangle)]
-pub extern "C" fn retto(image_data_ptr: *const u8, image_data_len: u32) {
+/// # Safety
+/// Make clippy happy!
+pub unsafe extern "C" fn retto(image_data_ptr: *const u8, image_data_len: u32) {
     let image_data =
         unsafe { std::slice::from_raw_parts(image_data_ptr, image_data_len as usize).to_vec() };
     thread::spawn(move || {

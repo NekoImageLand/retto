@@ -262,7 +262,7 @@ impl ProcessorInner for DetProcessor<'_> {
             Luma([if v > self.config.threch { 255 } else { 0 }])
         });
         if let Some(ref k) = self.dilation_kernel {
-            mask = grayscale_dilate(&mut mask, k);
+            mask = grayscale_dilate(&mask, k);
         }
         let mut boxes_pair: Vec<_> = find_contours::<i32>(&mask)
             .iter()

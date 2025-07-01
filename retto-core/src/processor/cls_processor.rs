@@ -67,7 +67,7 @@ impl Display for ClsProcessorResult {
             .map(|e| e.to_string())
             .collect::<Vec<_>>()
             .join(", ");
-        write!(f, "[{}]", joined)
+        write!(f, "[{joined}]")
     }
 }
 
@@ -127,7 +127,7 @@ impl<'p> Processor for ClsProcessor<'p> {
         F: FnMut(Self::PreProcessOutput<'a>) -> RettoResult<Self::PostProcessInput<'a>>,
     {
         let mut final_res: Vec<ClsProcessorSingleResult> = Vec::with_capacity(crop_images.len());
-        final_res.resize_with(crop_images.len(), || ClsProcessorSingleResult::default());
+        final_res.resize_with(crop_images.len(), ClsProcessorSingleResult::default);
         let mut image_index_asc_size: Vec<usize> = (0..crop_images.len()).collect();
         image_index_asc_size.sort_by_key(|&i| Reverse(OrderedFloat(crop_images[i].ori_ratio())));
         let batched = image_index_asc_size

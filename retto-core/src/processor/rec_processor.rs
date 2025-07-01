@@ -229,7 +229,7 @@ impl<'p> Processor for RecProcessor<'p> {
                     max_wh_ratio = max(max_wh_ratio, wh_ratio);
                 });
                 let mats = batch_idx
-                    .into_iter()
+                    .iter()
                     .map(|&i| {
                         images[i]
                             .resize_norm_image(

@@ -84,7 +84,6 @@ impl RettoWorkerModelProviderBuilder for RettoOrtWorkerModelProvider {
         })
     }
 
-    #[cfg(target_family = "wasm")]
     fn from_local_v4_blob_default() -> Self {
         Self(RettoWorkerModelProvider {
             det: RettoWorkerModelSource::Blob(
@@ -116,12 +115,12 @@ fn build_ort_session(
     let model_source = model_source.resolve()?;
     match model_source {
         #[cfg(not(target_family = "wasm"))]
-        RettoWorkerModelResolvedSource::Path(path) => builder
-            .commit_from_file(path)
-            .map_err(|e| RettoError::from(e)),
-        RettoWorkerModelResolvedSource::Blob(blob) => builder
-            .commit_from_memory(&blob)
-            .map_err(|e| RettoError::from(e)),
+        RettoWorkerModelResolvedSource::Path(path) => {
+            builder.commit_from_file(path).map_err(RettoError::from)
+        }
+        RettoWorkerModelResolvedSource::Blob(blob) => {
+            builder.commit_from_memory(&blob).map_err(RettoError::from)
+        }
     }
 }
 

@@ -26,7 +26,7 @@ pub enum RettoWorkerModelSource {
 }
 
 impl RettoWorkerModelSource {
-    pub(crate) fn resolve(mut self) -> RettoResult<RettoWorkerModelResolvedSource> {
+    pub(crate) fn resolve(self) -> RettoResult<RettoWorkerModelResolvedSource> {
         match self {
             #[cfg(not(target_family = "wasm"))]
             RettoWorkerModelSource::Path(path) => {
@@ -76,12 +76,11 @@ pub trait RettoWorkerModelProviderBuilder: Debug + Clone + MaybeSerde {
     fn from_hf_hub_v4_default() -> Self;
     #[cfg(not(target_family = "wasm"))]
     fn from_local_v4_path_default() -> Self;
-    #[cfg(target_family = "wasm")]
     fn from_local_v4_blob_default() -> Self;
     fn default_provider() -> Self {
         #[cfg(all(not(target_family = "wasm"), feature = "hf-hub"))]
         return Self::from_hf_hub_v4_default();
-        #[cfg(not(target_family = "wasm"))]
+        #[cfg(all(not(target_family = "wasm"), not(feature = "hf-hub")))]
         return Self::from_local_v4_path_default();
         #[cfg(target_family = "wasm")]
         return Self::from_local_v4_blob_default();

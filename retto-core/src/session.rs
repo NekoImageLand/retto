@@ -76,7 +76,7 @@ where
         let mut crop_images = det_res
             .0
             .iter()
-            .map(|(pb, _)| ImageHelper::new_from_rgb_image(image.get_crop_img(&pb)))
+            .map(|(pb, _)| ImageHelper::new_from_rgb_image(image.get_crop_img(pb)))
             .collect::<Vec<_>>();
         let cls = ClsProcessor::new(&self.config.cls_processor_config);
         let cls_res = cls.process(&mut crop_images, |i| self.worker.cls(i))?;
