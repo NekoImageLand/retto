@@ -24,7 +24,7 @@ ort-sys = { workspace = true, default-features = false } # https://github.com/py
 tracing.workspace = true
 
 [features]
-serde = ["serde/default", "serde_json/default", "ordered-float/serde", "ndarray/serde"]
+serde = ["dep:serde", "serde/default", "dep:serde_json", "serde_json/default", "ordered-float/serde", "ndarray/serde"]
 backend-ort = ["ort/default"]
 backend-ort-cuda = ["backend-ort", "ort/cuda"]
 backend-ort-directml = ["backend-ort"]
