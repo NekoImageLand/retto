@@ -13,5 +13,6 @@ tracing-subscriber.workspace = true
 serde_json.workspace = true
 
 [features]
+hf-hub = ["retto-core/hf-hub"]
 backend-ort-cuda = ["retto-core/backend-ort-cuda"]
 backend-ort-directml = ["retto-core/backend-ort-directml"]

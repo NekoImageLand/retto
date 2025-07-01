@@ -32,6 +32,9 @@ pub struct Cli {
     device: DeviceKind,
     #[arg(long, default_value_t = 0)]
     device_id: i32,
+    #[cfg(feature = "hf-hub")]
+    #[arg(long, default_value = "true")]
+    use_hf_hub: bool,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -39,19 +42,28 @@ fn main() -> anyhow::Result<()> {
     let stdout = tracing_subscriber::fmt::layer()
         .with_filter(EnvFilter::new("ort=debug,retto_core=debug,retto_cli=debug"));
     tracing_subscriber::registry().with(stdout).init();
+    let device = match cli.device {
+        DeviceKind::Cpu => RettoOrtWorkerDevice::CPU,
+        #[cfg(feature = "backend-ort-cuda")]
+        DeviceKind::Cuda => RettoOrtWorkerDevice::Cuda(cli.device_id),
+        #[cfg(feature = "backend-ort-directml")]
+        DeviceKind::DirectMl => RettoOrtWorkerDevice::DirectML(cli.device_id),
+    };
+    let mut models = RettoOrtWorkerModelProvider(RettoWorkerModelProvider {
+        det: RettoWorkerModelSource::Path(cli.det_model_path),
+        rec: RettoWorkerModelSource::Path(cli.rec_model_path),
+        cls: RettoWorkerModelSource::Path(cli.cls_model_path),
+    });
+    #[cfg(feature = "hf-hub")]
+    match cli.use_hf_hub {
+        true => {
+            tracing::info!("Using Hugging Face Hub for models");
+            models = RettoOrtWorkerModelProvider::from_hf_hub_v4_default();
+        }
+        false => {}
+    }
     let cfg: RettoSessionConfig<RettoOrtWorker> = RettoSessionConfig {
-        worker_config: RettoOrtWorkerConfig {
-            device: match cli.device {
-                DeviceKind::Cpu => RettoOrtWorkerDeviceConfig::CPU,
-                #[cfg(feature = "backend-ort-cuda")]
-                DeviceKind::Cuda => RettoOrtWorkerDeviceConfig::Cuda(cli.device_id),
-                #[cfg(feature = "backend-ort-directml")]
-                DeviceKind::DirectMl => RettoOrtWorkerDeviceConfig::DirectML(cli.device_id),
-            },
-            det_model_source: RettoWorkerModelProvider::Path(cli.det_model_path),
-            rec_model_source: RettoWorkerModelProvider::Path(cli.rec_model_path),
-            cls_model_source: RettoWorkerModelProvider::Path(cli.cls_model_path),
-        },
+        worker_config: RettoOrtWorkerConfig { device, models },
         ..Default::default()
     };
     let mut session = RettoSession::new(cfg)?;

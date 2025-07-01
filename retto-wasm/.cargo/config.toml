@@ -12,6 +12,10 @@ rustflags = [
 [env]
 CXXFLAGS_wasm32_unknown_emscripten="-Os -flto -fexceptions -fno-rtti -pthread -msse4.2 -msimd128"
 
+[profile.release]
+debug = false
+opt-level = "s"
+
 # Debug build might benefit from further flags, but one cannot yet set debug-only rustflags.
 # See: https://github.com/rust-lang/cargo/issues/10271
 # -fexceptions, -gsource-map, -sASSERTIONS, -sNO_DISABLE_EXCEPTION_CATCHING

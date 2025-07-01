@@ -22,22 +22,8 @@ static GLOBAL_TRACING: Lazy<Mutex<()>> = Lazy::new(|| {
 static GLOBAL_SESSION: Lazy<Mutex<RettoSession<RettoOrtWorker>>> = Lazy::new(|| {
     let session: RettoSession<RettoOrtWorker> = RettoSession::new(RettoSessionConfig {
         worker_config: RettoOrtWorkerConfig {
-            device: RettoOrtWorkerDeviceConfig::CPU,
-            det_model_source: RettoWorkerModelProvider::Blob(
-                include_bytes!("../../ch_PP-OCRv4_det_infer.onnx").to_vec(),
-            ),
-            rec_model_source: RettoWorkerModelProvider::Blob(
-                include_bytes!("../../ch_PP-OCRv4_rec_infer.onnx").to_vec(),
-            ),
-            cls_model_source: RettoWorkerModelProvider::Blob(
-                include_bytes!("../../ch_ppocr_mobile_v2.0_cls_infer.onnx").to_vec(),
-            ),
-        },
-        rec_processor_config: RecProcessorConfig {
-            character_source: RecCharacterDictProvider::Blob(
-                include_bytes!("../../ppocr_keys_v1.txt").to_vec(),
-            ),
-            ..Default::default()
+            device: RettoOrtWorkerDevice::CPU,
+            models: RettoOrtWorkerModelProvider::from_local_v4_blob_default(),
         },
         ..Default::default()
     })

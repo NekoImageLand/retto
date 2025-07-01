@@ -1,4 +1,6 @@
 pub mod error;
+#[cfg(feature = "hf-hub")]
+mod hf_hub_helper;
 mod image_helper;
 pub mod points;
 pub mod processor;

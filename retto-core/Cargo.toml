@@ -19,13 +19,15 @@ fast_image_resize.workspace = true
 geo.workspace = true
 geo-types.workspace = true
 geo-clipper.workspace = true
-ort = { workspace = true, default-features = false }
-ort-sys = { workspace = true, default-features = false } # https://github.com/pykeio/ort/issues/399
+ort = { workspace = true, optional = true, default-features = false }
+ort-sys = { workspace = true, optional = true, default-features = false } # https://github.com/pykeio/ort/issues/399
 tracing.workspace = true
+hf-hub = { workspace = true, optional = true }
 
 [features]
 serde = ["dep:serde", "serde/default", "dep:serde_json", "serde_json/default", "ordered-float/serde", "ndarray/serde"]
+hf-hub = ["dep:hf-hub"]
 backend-ort = ["ort/default"]
 backend-ort-cuda = ["backend-ort", "ort/cuda"]
 backend-ort-directml = ["backend-ort"]
-backend-ort-wasi = ["backend-ort"]
+backend-ort-wasm = ["backend-ort"]

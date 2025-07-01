@@ -30,15 +30,12 @@ ort = { version = "=2.0.0-rc.10", default-features = false }
 ort-sys = { version = "=2.0.0-rc.10", default-features = false }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+hf-hub = "0.4.3"
 
 [patch.crates-io]
 clipper-sys = { git = "https://github.com/NekoImageLand/clipper-sys", branch = "master" }
 
 [profile.release]
-opt-level = 2
 lto = true
+debug = true
 codegen-units = 1
-# debug = true
-
-[profile.release.package.retto-wasi]
-opt-level = "s"

@@ -1,15 +1,14 @@
 [package]
-name = "retto-wasi"
+name = "retto-wasm"
 version.workspace = true
 edition.workspace = true
 
 [[bin]]
 path = "src/main.rs"
-name = "retto_wasi"
-
+name = "retto_wasm"
 
 [dependencies]
-retto-core = { path = "../retto-core", features = ["serde", "backend-ort-wasi"] }
+retto-core = { path = "../retto-core", features = ["serde", "backend-ort-wasm"] }
 once_cell.workspace = true
 serde_json.workspace = true
 tracing.workspace = true

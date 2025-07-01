@@ -10,6 +10,11 @@ pub enum RettoError {
     OrtError(#[from] ort::error::Error),
     #[error(transparent)]
     Utf8Error(#[from] std::string::FromUtf8Error),
+    #[cfg(feature = "hf-hub")]
+    #[error(transparent)]
+    HfHubError(#[from] hf_hub::api::sync::ApiError),
+    #[error("Model not found: {0}")]
+    ModelNotFoundError(String),
 }
 
 pub type RettoResult<T> = Result<T, RettoError>;
