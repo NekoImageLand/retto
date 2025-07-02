@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/workflows/setup-env.yml
+      - uses: ./.github/workflows/setup-env
         with:
           runner-os: ${{runner.os}}
       - name: Check formatting
@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/workflows/setup-env.yml
+      - uses: ./.github/workflows/setup-env
         with:
           runner-os: ${{runner.os}}
       - name: Check Clippy
@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/workflows/setup-env.yml
+      - uses: ./.github/workflows/setup-env
         with:
           runner-os: ${{runner.os}}
       - name: Check Clippy
