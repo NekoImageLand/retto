@@ -75,6 +75,16 @@ jobs:
           just build-cli
           cd target/release; ls
           ls -la
+      - name: Package binaries
+        run: |
+          mkdir -p artifacts
+          cp target/release/retto-cli* artifacts/
+          rm artifacts/*.d
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: retto-cli-${{ matrix.target }}
+          path: artifacts
 
   build-wasm:
     name: Build retto-wasm
@@ -95,3 +105,8 @@ jobs:
         run: just setup
       - name: Build retto-wasm
         run: just build-wasm
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: retto-cli-${{ matrix.target }}
+          path: retto-wasm/fe/*.tgz

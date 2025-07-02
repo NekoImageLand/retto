@@ -23,7 +23,8 @@ build-wasm-lib: setup
     cd retto-wasm && cargo +nightly build --target wasm32-unknown-emscripten --all-features --release
 
 build-wasm-fe: setup
-    cp target/wasm32-unknown-emscripten/release/retto_wasm.* retto-wasm/fe && cd retto-wasm/fe && pnpm i && pnpm build
+    cp target/wasm32-unknown-emscripten/release/retto_wasm.* retto-wasm/fe
+    cd retto-wasm/fe && pnpm i && pnpm build && pnpm pack
 
 build-wasm: build-wasm-lib build-wasm-fe
 

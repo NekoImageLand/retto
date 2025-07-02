@@ -37,5 +37,5 @@ clipper-sys = { git = "https://github.com/NekoImageLand/clipper-sys", branch = "
 
 [profile.release]
 lto = true
-debug = true
+debug = false
 codegen-units = 1
