@@ -10,6 +10,8 @@ rustflags = [
 ]
 
 [env]
+RUSTC_LOG="rustc_codegen_ssa::back::link=info"
+EMCC_DEBUG=2
 CXXFLAGS_wasm32_unknown_emscripten="-Os -flto -fexceptions -fno-rtti -pthread -msse4.2 -msimd128"
 
 [profile.release]
