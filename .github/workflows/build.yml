@@ -88,6 +88,8 @@ jobs:
         uses: mymindstorm/setup-emsdk@v14
         with:
           version: 4.0.4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4.1.0
       - name: Setup Rust toolchain
         run: just setup
       - name: Build retto-wasm
