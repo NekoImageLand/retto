@@ -30,6 +30,7 @@ pub struct Cli {
     images: String,
     #[arg(long, value_enum, default_value_t = DeviceKind::Cpu)]
     device: DeviceKind,
+    #[cfg(any(feature = "backend-ort-cuda", feature = "backend-ort-directml"))]
     #[arg(long, default_value_t = 0)]
     device_id: i32,
     #[cfg(feature = "hf-hub")]

@@ -1,5 +1,6 @@
 // @ts-ignore
 import initWASI from "./retto_wasm.js";
+import axios from "axios";
 
 export interface Point {
   x: number;
@@ -58,13 +59,25 @@ export class Retto {
   private constructor(private module: typeof RettoInner) {}
   private static inner: Promise<Retto> | null = null;
 
-  static init(): Promise<Retto> {
+  static init(onProgress?: (ratio: number) => void): Promise<Retto> {
     if (!this.inner) {
-      this.inner = initWASI({
-        locateFile: () =>
-          new URL("public/retto_wasm.wasm", import.meta.url).href,
-      })
-        .then((mod: typeof RettoInner) => new Retto(mod));
+      this.inner = (async () => {
+        const wasmUrl = new URL("public/retto_wasm.wasm", import.meta.url).href;
+        const resp = await axios.get<ArrayBuffer>(wasmUrl, {
+          responseType: "arraybuffer",
+          onDownloadProgress: (e) => {
+            if (e.total && onProgress) {
+              onProgress(e.loaded / e.total);
+            }
+          },
+        });
+        const wasmBinary = resp.data;
+        const mod = await initWASI({
+          wasmBinary,
+          locateFile: () => "",
+        }) as typeof RettoInner;
+        return new Retto(mod);
+      })();
     }
     return this.inner!;
   }
@@ -87,7 +100,7 @@ export class Retto {
 }
 
 export const retto = {
-  init: () => Retto.init(),
+  init: (onProgress?: (ratio: number) => void) => Retto.init(onProgress),
   recognize: async (data: Uint8Array | ArrayBuffer) => {
     const engine = await Retto.init();
     return engine.recognize(data);
