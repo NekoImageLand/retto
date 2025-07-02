@@ -151,11 +151,15 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: retto-artifacts
-          pattern: "*.tgz"
+          pattern: "retto-wasm"
           merge-multiple: true
+      - name: Unzip artifacts
+        run: |
+          unzip -o retto-artifacts/retto-wasm.zip
+          ls -la retto-artifacts
       - name: Publish retto-wasm on npm
         run: |
-          TGZ_FILE=$(find retto-artifacts -maxdepth 1 -name '*.tgz' | head -n 1)
+          TGZ_FILE=$(find retto-artifacts -name '*.tgz' | head -n 1)
           echo "📦 Found package: $TGZ_FILE"
           pnpm publish "$TGZ_FILE" --access public --no-git-checks --no-verify-access --dry-run
         env:
