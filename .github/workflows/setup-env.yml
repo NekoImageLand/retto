@@ -1,0 +1,25 @@
+name: Setup retto CI/CD environment
+
+on:
+  workflow_call:
+    inputs:
+      runner-os:
+        required: true
+        default: "ubuntu-latest"
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-Dwarnings"
+
+jobs:
+  retto-env-prepare:
+    runs-on: ${{ inputs.os }}
+    steps:
+      - uses: extractions/setup-just@v3
+      - name: Setup emsdk
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.4
+      - name: Setup Rust toolchain
+        run: just setup

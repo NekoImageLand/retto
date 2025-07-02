@@ -1,0 +1,44 @@
+name: Check retto
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-Dwarnings"
+
+jobs:
+  fmt-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: .github/workflows/setup-env.yml
+        with:
+          runner-os: ${{runner.os}}
+      - name: Check formatting
+        run: just fmt-check
+
+  clippy-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: .github/workflows/setup-env.yml
+        with:
+          runner-os: ${{runner.os}}
+      - name: Check Clippy
+        run: just clippy-check
+
+  build-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: .github/workflows/setup-env.yml
+        with:
+          runner-os: ${{runner.os}}
+      - name: Check Clippy
+        run: just build-check

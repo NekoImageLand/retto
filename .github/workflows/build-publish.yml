@@ -1,0 +1,40 @@
+name: Build and Publish retto
+
+on:
+  workflow_run:
+    workflows: [Check retto]
+    types:
+      - completed
+
+permissions:
+  actions: write
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-Dwarnings"
+
+jobs:
+  build-cli:
+    name: Build retto-cli
+    runs-on: ${{ matrix.host }}
+    strategy:
+      matrix:
+        host: [ ubuntu-latest, windows-latest, macos-latest ]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: .github/workflows/setup-env.yml
+        with:
+          runner-os: ${{runner.os}}
+      - name: Build retto-cli
+        run: |
+          just build-cli
+          ls
+
+  build-wasm:
+    name: Build retto-wasm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: .github/workflows/setup-env.yml
+      - name: Build retto-wasm
+        run: just build-wasm
