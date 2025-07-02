@@ -117,7 +117,7 @@ impl Default for RecProcessorConfig {
         ));
         #[cfg(target_family = "wasm")]
         let character_source = RecCharacterDictProvider::OutSide(RettoWorkerModelSource::Blob(
-            include_bytes!("../../../ppocr_keys_v1.txt").to_vec(),
+            include_bytes!("../../models/ppocr_keys_v1.txt").to_vec(),
         ));
         RecProcessorConfig {
             character_source,
