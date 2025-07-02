@@ -1,5 +1,5 @@
 {
-  "name": "retto-wasm",
+  "name": "@nekoimageland/retto-wasm",
   "version": "0.1.0",
   "scripts": {
     "build": "rolldown -c"
@@ -21,7 +21,7 @@
   ],
   "keywords": [
     "wasm",
-    "ocr"
+    "PaddleOCR"
   ],
   "author": "NekoImageLand",
   "license": "AGPL-3.0",
