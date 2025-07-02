@@ -3,7 +3,7 @@ name: Setup retto CI/CD environment
 on:
   workflow_call:
     inputs:
-      runner-os:
+      os:
         required: true
         default: "ubuntu-latest"
         type: string
