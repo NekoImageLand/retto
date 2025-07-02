@@ -5,8 +5,7 @@ on:
   pull_request:
   workflow_dispatch:
 
-permissions:
-  actions: write
+permissions: write-all
 
 env:
   CARGO_TERM_COLOR: always
