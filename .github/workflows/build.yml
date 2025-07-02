@@ -1,4 +1,4 @@
-name: Check retto
+name: Check and Build retto
 
 on:
   push:
@@ -54,3 +54,42 @@ jobs:
         run: just setup
       - name: Check Clippy
         run: just build-check
+
+  build-cli:
+    name: Build retto-cli
+    runs-on: ${{ matrix.host }}
+    needs: [ "fmt-check", "clippy-check", "build-check" ]
+    strategy:
+      matrix:
+        host: [ ubuntu-latest, windows-latest, macos-latest ]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: extractions/setup-just@v3
+      - name: Setup emsdk
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.4
+      - name: Setup Rust toolchain
+        run: just setup
+      - name: Build retto-cli
+        run: |
+          just build-cli
+          ls
+
+  build-wasm:
+    name: Build retto-wasm
+    runs-on: ubuntu-latest
+    needs: [ "fmt-check", "clippy-check", "build-check" ]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: extractions/setup-just@v3
+      - name: Setup emsdk
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.4
+      - name: Setup Rust toolchain
+        run: just setup
+      - name: Build retto-wasm
+        run: |
+          sudo apt-get update && sudo apt-get install -y libssl-dev
+          just build-wasm
