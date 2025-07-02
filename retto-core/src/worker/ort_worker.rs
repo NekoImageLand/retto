@@ -87,13 +87,13 @@ impl RettoWorkerModelProviderBuilder for RettoOrtWorkerModelProvider {
     fn from_local_v4_blob_default() -> Self {
         Self(RettoWorkerModelProvider {
             det: RettoWorkerModelSource::Blob(
-                include_bytes!("../../../ch_PP-OCRv4_det_infer.onnx").to_vec(),
+                include_bytes!("../../models/ch_PP-OCRv4_det_infer.onnx").to_vec(),
             ),
             rec: RettoWorkerModelSource::Blob(
-                include_bytes!("../../../ch_PP-OCRv4_rec_infer.onnx").to_vec(),
+                include_bytes!("../../models/ch_PP-OCRv4_rec_infer.onnx").to_vec(),
             ),
             cls: RettoWorkerModelSource::Blob(
-                include_bytes!("../../../ch_ppocr_mobile_v2.0_cls_infer.onnx").to_vec(),
+                include_bytes!("../../models/ch_ppocr_mobile_v2.0_cls_infer.onnx").to_vec(),
             ),
         })
     }

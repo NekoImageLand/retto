@@ -24,8 +24,14 @@ ort-sys = { workspace = true, optional = true, default-features = false } # http
 tracing.workspace = true
 hf-hub = { workspace = true, optional = true }
 
+[build-dependencies]
+hf-hub.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
 [features]
 serde = ["dep:serde", "serde/default", "dep:serde_json", "serde_json/default", "ordered-float/serde", "ndarray/serde"]
+download-models = ["dep:hf-hub"]
 hf-hub = ["dep:hf-hub"]
 backend-ort = ["ort/default"]
 backend-ort-cuda = ["backend-ort", "ort/cuda"]

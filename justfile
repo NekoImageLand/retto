@@ -1,10 +1,7 @@
 set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
 
 clean:
-    cargo clean
-    rm -r retto-wasm/fe/retto_wasm.*
-    rm -r retto-wasm/fe/dist
-    rm -r retto-wasm/fe/node_modules
+    cargo clean; rm -r retto-core/models; rm -r retto-wasm/fe/retto_wasm.*; rm -r retto-wasm/fe/dist; rm -r retto-wasm/fe/node_modules
 
 setup:
     rustup toolchain install nightly --profile complete
@@ -24,7 +21,7 @@ build-cli: setup
 
 build-wasm-lib: setup
     rustup toolchain install nightly && rustup target add wasm32-unknown-emscripten --toolchain nightly
-    cd retto-wasm && cargo +nightly build --target wasm32-unknown-emscripten --release
+    cd retto-wasm && cargo +nightly build --target wasm32-unknown-emscripten --all-features --release
 
 build-wasm-fe: setup
     cp target/wasm32-unknown-emscripten/release/retto_wasm.* retto-wasm/fe && cd retto-wasm/fe && pnpm i && pnpm build
