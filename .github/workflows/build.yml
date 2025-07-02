@@ -2,7 +2,25 @@ name: Check and Build retto
 
 on:
   push:
+    branches:
+      - master
+    paths:
+      - "retto-cli/**"
+      - "retto-core/**"
+      - "retto-wasm/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "justfile"
   pull_request:
+    branches:
+      - master
+    paths:
+      - "retto-cli/**"
+      - "retto-core/**"
+      - "retto-wasm/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "justfile"
   workflow_dispatch:
 
 permissions: write-all
@@ -157,7 +175,7 @@ jobs:
         run: |
           TGZ_FILE=$(find retto-artifacts -name '*.tgz' | head -n 1)
           echo "📦 Found package: $TGZ_FILE"
-          pnpm publish ./"$TGZ_FILE" --access public --no-git-checks --dry-run
+          pnpm publish ./"$TGZ_FILE" --access public --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
