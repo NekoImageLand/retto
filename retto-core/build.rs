@@ -28,8 +28,9 @@ fn main() {
         .cloned()
         .filter(|&model| !model_dir.join(model).exists())
         .collect::<Vec<_>>();
-    if need_download_models.len() > 0 {
-        tracing::info!("Downloading models...");
+    if need_download_models.is_empty() {
+        tracing::info!("No need for downloading models...");
+        return;
     }
     let api = ApiBuilder::new().with_progress(true).build().unwrap();
     let downloaded_path = need_download_models
@@ -37,7 +38,7 @@ fn main() {
         .map(|&model| {
             tracing::info!("Downloading model: {}", model);
             api.model("pk5ls20/PaddleModel".to_string())
-                .get(&format!("retto/onnx/{}", model))
+                .get(&format!("retto/onnx/{model}"))
                 .expect("Failed to download model")
         })
         .collect::<Vec<_>>();
@@ -55,9 +56,9 @@ fn main() {
         );
         #[cfg(unix)]
         std::os::unix::fs::symlink(src, &link_path)
-            .unwrap_or_else(|e| panic!("failed to create unix symlink: {}", e));
+            .unwrap_or_else(|e| panic!("failed to create unix symlink: {e}"));
         #[cfg(windows)]
         std::os::windows::fs::symlink_file(src, &link_path)
-            .unwrap_or_else(|e| panic!("failed to create windows symlink: {}", e));
+            .unwrap_or_else(|e| panic!("failed to create windows symlink: {e}"));
     }
 }
