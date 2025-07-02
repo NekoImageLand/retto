@@ -22,7 +22,7 @@ jobs:
         host: [ ubuntu-latest, windows-latest, macos-latest ]
     steps:
       - uses: actions/checkout@v4
-      - uses: .github/workflows/setup-env.yml
+      - uses: ./.github/workflows/setup-env.yml
         with:
           runner-os: ${{runner.os}}
       - name: Build retto-cli
@@ -35,6 +35,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: .github/workflows/setup-env.yml
+      - uses: ./.github/workflows/setup-env.yml
       - name: Build retto-wasm
         run: just build-wasm
