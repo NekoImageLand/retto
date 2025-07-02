@@ -155,6 +155,7 @@ jobs:
           merge-multiple: true
       - name: Unzip artifacts
         run: |
+          ls -la retto-artifacts
           unzip -o retto-artifacts/retto-wasm.zip
           ls -la retto-artifacts
       - name: Publish retto-wasm on npm
