@@ -74,7 +74,8 @@ jobs:
       - name: Build retto-cli
         run: |
           just build-cli
-          ls
+          cd target/release; ls
+          ls -la
 
   build-wasm:
     name: Build retto-wasm
