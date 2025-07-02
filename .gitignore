@@ -2,9 +2,14 @@ target/
 .idea/
 .vscode/
 lib/
+dist/
+node_modules/
 *.onnx
 *.png
 *.jpg
 *.svg
 *.txt
 *.py
+*.js
+*.wasm
+*.tgz

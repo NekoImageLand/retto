@@ -1,0 +1,42 @@
+{
+  "name": "retto-wasm",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "rolldown -c"
+  },
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NekoImageLand/retto.git"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist/",
+    "package.json"
+  ],
+  "keywords": [
+    "wasm",
+    "ocr"
+  ],
+  "author": "pk5ls20",
+  "license": "AGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/NekoImageLand/retto/issues"
+  },
+  "homepage": "https://github.com/NekoImageLand/retto#readme",
+  "description": "High-performance OCR powered by WebAssembly",
+  "packageManager": "pnpm@9.14.2+sha512.6e2baf77d06b9362294152c851c4f278ede37ab1eba3a55fda317a4a17b209f4dbb973fb250a77abc463a341fcb1f17f17cfa24091c4eb319cda0d9b84278387",
+  "devDependencies": {
+    "@types/node": "^24.0.10",
+    "rolldown": "1.0.0-beta.23",
+    "rolldown-plugin-dts": "^0.13.13",
+    "rollup-plugin-copy": "^3.5.0",
+    "tslib": "^2.8.1",
+    "typescript": "^5.8.3"
+  }
+}
