@@ -22,9 +22,13 @@ jobs:
         host: [ ubuntu-latest, windows-latest, macos-latest ]
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/workflows/setup-env
+      - uses: extractions/setup-just@v3
+      - name: Setup emsdk
+        uses: mymindstorm/setup-emsdk@v14
         with:
-          runner-os: ${{runner.os}}
+          version: 4.0.4
+      - name: Setup Rust toolchain
+        run: just setup
       - name: Build retto-cli
         run: |
           just build-cli
@@ -35,6 +39,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/workflows/setup-env
+      - uses: extractions/setup-just@v3
+      - name: Setup emsdk
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.4
+      - name: Setup Rust toolchain
+        run: just setup
       - name: Build retto-wasm
         run: just build-wasm

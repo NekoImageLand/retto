@@ -17,9 +17,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/workflows/setup-env
+      - uses: extractions/setup-just@v3
+      - name: Setup emsdk
+        uses: mymindstorm/setup-emsdk@v14
         with:
-          runner-os: ${{runner.os}}
+          version: 4.0.4
+      - name: Setup Rust toolchain
+        run: just setup
       - name: Check formatting
         run: just fmt-check
 
@@ -27,9 +31,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/workflows/setup-env
+      - uses: extractions/setup-just@v3
+      - name: Setup emsdk
+        uses: mymindstorm/setup-emsdk@v14
         with:
-          runner-os: ${{runner.os}}
+          version: 4.0.4
+      - name: Setup Rust toolchain
+        run: just setup
       - name: Check Clippy
         run: just clippy-check
 
@@ -37,8 +45,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/workflows/setup-env
+      - uses: extractions/setup-just@v3
+      - name: Setup emsdk
+        uses: mymindstorm/setup-emsdk@v14
         with:
-          runner-os: ${{runner.os}}
+          version: 4.0.4
+      - name: Setup Rust toolchain
+        run: just setup
       - name: Check Clippy
         run: just build-check
