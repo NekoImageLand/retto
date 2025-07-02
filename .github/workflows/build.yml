@@ -83,7 +83,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: retto-cli-${{ matrix.target }}
+          name: retto-cli-${{ matrix.host }}
           path: artifacts
 
   build-wasm:
@@ -108,5 +108,5 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: retto-cli-${{ matrix.target }}
+          name: retto-wasm
           path: retto-wasm/fe/*.tgz
