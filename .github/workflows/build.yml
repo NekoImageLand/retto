@@ -158,7 +158,7 @@ jobs:
         run: |
           TGZ_FILE=$(find retto-artifacts -name '*.tgz' | head -n 1)
           echo "📦 Found package: $TGZ_FILE"
-          pnpm publish "$TGZ_FILE" --access public --no-git-checks --dry-run
+          pnpm publish ./"$TGZ_FILE" --access public --no-git-checks --dry-run
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
