@@ -20,7 +20,6 @@ build-cli: setup
     cargo build -p retto-cli --features "hf-hub" --release
 
 build-wasm-lib: setup
-    rustup toolchain install nightly && rustup target add wasm32-unknown-emscripten --toolchain nightly
     cd retto-wasm && cargo +nightly build --target wasm32-unknown-emscripten --all-features --release
 
 build-wasm-fe: setup

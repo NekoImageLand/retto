@@ -90,6 +90,8 @@ jobs:
           version: 4.0.4
       - name: Setup pnpm
         uses: pnpm/action-setup@v4.1.0
+        with:
+          package_json_file: "retto-wasm/fe/package.json"
       - name: Setup Rust toolchain
         run: just setup
       - name: Build retto-wasm
