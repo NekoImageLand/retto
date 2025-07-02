@@ -77,11 +77,12 @@ jobs:
           mkdir -p artifacts
           cp target/release/retto-cli* artifacts/
           rm artifacts/*.d
+          tar -czf artifacts/retto-cli-${{ matrix.host }}.tar.gz -C artifacts .
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: retto-cli-${{ matrix.host }}
-          path: artifacts
+          path: artifacts/retto-cli-${{ matrix.host }}.tar.gz
 
   build-wasm:
     name: Build retto-wasm
@@ -153,11 +154,6 @@ jobs:
           path: retto-artifacts
           pattern: "retto-wasm"
           merge-multiple: true
-      - name: Unzip artifacts
-        run: |
-          ls -la retto-artifacts
-          unzip -o retto-artifacts/retto-wasm.zip
-          ls -la retto-artifacts
       - name: Publish retto-wasm on npm
         run: |
           TGZ_FILE=$(find retto-artifacts -name '*.tgz' | head -n 1)
