@@ -22,7 +22,7 @@ geo-clipper.workspace = true
 ort = { workspace = true, optional = true, default-features = false }
 ort-sys = { workspace = true, optional = true, default-features = false } # https://github.com/pykeio/ort/issues/399
 tracing.workspace = true
-hf-hub = { workspace = true, optional = true }
+hf-hub = { workspace = true, optional = true, features = ["ureq", "rustls-tls"] }
 
 [build-dependencies]
 hf-hub.workspace = true
