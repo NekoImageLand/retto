@@ -7,7 +7,8 @@ clean:
     rm -r retto-wasm/fe/node_modules
 
 setup:
-    rustup toolchain install nightly && rustup target add wasm32-unknown-emscripten --toolchain nightly
+    rustup toolchain install nightly --profile complete
+    rustup target add wasm32-unknown-emscripten --toolchain nightly
 
 fmt-check: setup
     cargo +nightly fmt --all -- --check
