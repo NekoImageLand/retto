@@ -3,6 +3,7 @@ use crate::image_helper::ImageHelper;
 use crate::processor::prelude::*;
 use crate::serde::*;
 use crate::worker::RettoWorker;
+use std::sync::mpsc;
 
 #[derive(Debug)]
 pub struct RettoSession<W: RettoWorker> {
@@ -46,6 +47,14 @@ pub struct RettoWorkerResult {
     pub rec_result: RecProcessorResult,
 }
 
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum RettoWorkerStageResult {
+    Det(DetProcessorResult),
+    Cls(ClsProcessorResult),
+    Rec(RecProcessorResult),
+}
+
 impl<W> RettoSession<W>
 where
     W: RettoWorker,
@@ -63,7 +72,10 @@ where
         })
     }
 
-    pub fn run(&mut self, input: impl AsRef<[u8]>) -> RettoResult<RettoWorkerResult> {
+    fn process_pipeline<F>(&mut self, input: impl AsRef<[u8]>, mut callback: F) -> RettoResult<()>
+    where
+        F: FnMut(RettoWorkerStageResult),
+    {
         let mut image = ImageHelper::new_from_raw_img_flow(input)?; // TODO: args
         let (ratio_h, ratio_w) =
             image.resize_both(self.config.max_side_len, self.config.min_side_len)?;
@@ -71,24 +83,48 @@ where
         let arr = image.array_view()?; // cheap
         let det = DetProcessor::new(&self.config.det_processor_config, after_h, after_w)?;
         let det_res = det.process(arr, |i| self.worker.det(i))?;
-        tracing::debug!("det result: {:?}", det_res);
         // As you can see, crop_images is unsanitary, but currently only limited to changing incorrect cls angles
         let mut crop_images = det_res
             .0
             .iter()
             .map(|(pb, _)| ImageHelper::new_from_rgb_image(image.get_crop_img(pb)))
             .collect::<Vec<_>>();
+        // Would it be better to come back later?
+        callback(RettoWorkerStageResult::Det(det_res));
         let cls = ClsProcessor::new(&self.config.cls_processor_config);
         let cls_res = cls.process(&mut crop_images, |i| self.worker.cls(i))?;
-        tracing::debug!("cls result: {:?}", cls_res);
+        callback(RettoWorkerStageResult::Cls(cls_res));
         let rec = RecProcessor::new(&self.config.rec_processor_config, &self.rec_character);
         let rec_res = rec.process(&crop_images, |i| self.worker.rec(i))?;
-        tracing::debug!("rec result: {:?}", rec_res);
-        // TODO: RettoWorkerResult
+        callback(RettoWorkerStageResult::Rec(rec_res));
+        Ok(())
+    }
+
+    pub fn run(&mut self, input: impl AsRef<[u8]>) -> RettoResult<RettoWorkerResult> {
+        let mut det_opt = None;
+        let mut cls_opt = None;
+        let mut rec_opt = None;
+        self.process_pipeline(input, |stage| match stage {
+            RettoWorkerStageResult::Det(r) => det_opt = Some(r),
+            RettoWorkerStageResult::Cls(r) => cls_opt = Some(r),
+            RettoWorkerStageResult::Rec(r) => rec_opt = Some(r),
+        })?;
         Ok(RettoWorkerResult {
-            det_result: det_res,
-            cls_result: cls_res,
-            rec_result: rec_res,
+            det_result: det_opt.unwrap(),
+            cls_result: cls_opt.unwrap(),
+            rec_result: rec_opt.unwrap(),
+        })
+    }
+
+    pub fn run_stream(
+        &mut self,
+        input: impl AsRef<[u8]>,
+        sender: mpsc::Sender<RettoWorkerStageResult>,
+    ) -> RettoResult<()> {
+        self.process_pipeline(input, |stage| {
+            if let Err(e) = sender.send(stage) {
+                tracing::error!("Error sending request {:?}", e);
+            }
         })
     }
 }

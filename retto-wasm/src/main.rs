@@ -49,9 +49,21 @@ pub extern "C" fn dealloc(ptr: *mut c_void, size: usize) {
     }
 }
 
-em_js!((), retto_notify_done, (msg: *const c_char), {
-    if (Module.onRettoNotifyDone) {
-        Module.onRettoNotifyDone(UTF8ToString(msg));
+em_js!((), retto_notyfy_det_done, (msg: *const c_char), {
+    if (Module.onRettoNotifyDetDone) {
+        Module.onRettoNotifyDetDone(UTF8ToString(msg));
+    }
+});
+
+em_js!((), retto_notyfy_cls_done, (msg: *const c_char), {
+    if (Module.onRettoNotifyClsDone) {
+        Module.onRettoNotifyClsDone(UTF8ToString(msg));
+    }
+});
+
+em_js!((), retto_notyfy_rec_done, (msg: *const c_char), {
+    if (Module.onRettoNotifyRecDone) {
+        Module.onRettoNotifyRecDone(UTF8ToString(msg));
     }
 });
 
@@ -69,19 +81,40 @@ pub unsafe extern "C" fn retto(image_data_ptr: *const u8, image_data_len: u32) {
         unsafe { std::slice::from_raw_parts(image_data_ptr, image_data_len as usize).to_vec() };
     thread::spawn(move || {
         Lazy::force(&GLOBAL_TRACING);
-        let mut session = GLOBAL_SESSION
-            .lock()
-            .expect("Failed to lock RettoSession mutex");
-        let res = session.run(image_data).expect("Failed to run RettoSession");
-        let res_str = serde_json::to_string(&res).expect("Failed to serialize RettoSession");
-        let res_cstr = CString::new(res_str).expect("Failed to create CString");
-        let ptr: *mut c_char = res_cstr.into_raw();
-        unsafe {
-            emscripten_sync_run_in_main_runtime_thread_(
-                0 | 1 << 25 | 0 << (2 * 0), // aka EM_FUNC_SIG_VI, TODO: use enum
-                retto_notify_done as *mut c_void,
-                ptr as *const c_char,
-            );
+        let (tx, rx) = std::sync::mpsc::channel::<RettoWorkerStageResult>();
+        thread::spawn(move || {
+            let mut session = GLOBAL_SESSION
+                .lock()
+                .expect("Failed to lock RettoSession mutex");
+            session
+                .run_stream(image_data, tx)
+                .expect("Failed to run RettoSession stream")
+        });
+        const EMSCRIPTEN_SIG: c_uint = 0 | 1 << 25 | 0 << (2 * 0); // aka EM_FUNC_SIG_VI, TODO: use enum
+        for stage in rx {
+            let res_str =
+                serde_json::to_string(&stage).expect("Failed to serialize RettoWorkerStageResult");
+            let res_cstr = CString::new(res_str).expect("Failed to create CString");
+            let ptr: *const c_char = res_cstr.as_ptr();
+            let _ = unsafe {
+                match stage {
+                    RettoWorkerStageResult::Det(_) => emscripten_sync_run_in_main_runtime_thread_(
+                        EMSCRIPTEN_SIG,
+                        retto_notyfy_det_done as *mut c_void,
+                        ptr as *const c_char,
+                    ),
+                    RettoWorkerStageResult::Cls(_) => emscripten_sync_run_in_main_runtime_thread_(
+                        EMSCRIPTEN_SIG,
+                        retto_notyfy_cls_done as *mut c_void,
+                        ptr as *const c_char,
+                    ),
+                    RettoWorkerStageResult::Rec(_) => emscripten_sync_run_in_main_runtime_thread_(
+                        EMSCRIPTEN_SIG,
+                        retto_notyfy_rec_done as *mut c_void,
+                        ptr as *const c_char,
+                    ),
+                }
+            };
         }
     });
 }

@@ -13,10 +13,7 @@ export interface PointBox {
 }
 
 export interface DetProcessorResult {
-  items: Array<{
-    box: PointBox;
-    score: number;
-  }>;
+  items: Array<{ box: PointBox; score: number }>;
 }
 
 export interface ClsPostProcessLabel {
@@ -41,18 +38,19 @@ export interface RecProcessorResult {
   items: RecProcessorSingleResult[];
 }
 
-export interface RettoWorkerResult {
-  detResult: DetProcessorResult;
-  clsResult: ClsProcessorResult;
-  recResult: RecProcessorResult;
-}
+export type RettoWorkerStage =
+  | { stage: "det"; result: DetProcessorResult }
+  | { stage: "cls"; result: ClsProcessorResult }
+  | { stage: "rec"; result: RecProcessorResult };
 
 declare const RettoInner: {
+  HEAPU8: Uint8Array;
   _alloc(n: number): number;
   _dealloc(p: number, n: number): void;
-  _retto(p: number, n: number): void;
-  HEAPU8: Uint8Array;
-  onRettoNotifyDone(res: string): void;
+  _retto(ptr: number, len: number): void;
+  onRettoNotifyDetDone(res: string): void;
+  onRettoNotifyClsDone(res: string): void;
+  onRettoNotifyRecDone(res: string): void;
 };
 
 export class Retto {
@@ -66,43 +64,51 @@ export class Retto {
         const resp = await axios.get<ArrayBuffer>(wasmUrl, {
           responseType: "arraybuffer",
           onDownloadProgress: (e) => {
-            if (e.total && onProgress) {
-              onProgress(e.loaded / e.total);
-            }
+            if (e.total && onProgress) onProgress(e.loaded / e.total);
           },
         });
-        const wasmBinary = resp.data;
-        const mod = await initWASI({
-          wasmBinary,
+        const mod = (await initWASI({
+          wasmBinary: resp.data,
           locateFile: () => "",
-        }) as typeof RettoInner;
+        })) as typeof RettoInner;
         return new Retto(mod);
       })();
     }
-    return this.inner!;
+    return this.inner;
   }
 
-  async recognize(data: Uint8Array | ArrayBuffer) {
+  async *recognize(
+    data: Uint8Array | ArrayBuffer,
+  ): AsyncGenerator<RettoWorkerStage, void, unknown> {
     const bytes = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
     const len = bytes.length;
-    const alloc = this.module._alloc as (n: number) => number;
-    const dealloc = this.module._dealloc as (p: number, n: number) => void;
-    const wasmRet = this.module._retto as (p: number, n: number) => void;
-    const ptr = alloc(len);
+    const ptr = this.module._alloc(len);
     this.module.HEAPU8.set(bytes, ptr);
-    const result = await new Promise<RettoWorkerResult>((resolve) => {
-      this.module.onRettoNotifyDone = (res: string) => resolve(JSON.parse(res));
-      wasmRet(ptr, len);
+    const detP = new Promise<DetProcessorResult>((resolve) => {
+      this.module.onRettoNotifyDetDone = (res) =>
+        resolve(JSON.parse(res) as DetProcessorResult);
     });
-    dealloc(ptr, len);
-    return result;
+    const clsP = new Promise<ClsProcessorResult>((resolve) => {
+      this.module.onRettoNotifyClsDone = (res) =>
+        resolve(JSON.parse(res) as ClsProcessorResult);
+    });
+    const recP = new Promise<RecProcessorResult>((resolve) => {
+      this.module.onRettoNotifyRecDone = (res) =>
+        resolve(JSON.parse(res) as RecProcessorResult);
+    });
+    this.module._retto(ptr, len);
+    const det = await detP;
+    yield { stage: "det", result: det };
+    const cls = await clsP;
+    yield { stage: "cls", result: cls };
+    const rec = await recP;
+    yield { stage: "rec", result: rec };
+    this.module._dealloc(ptr, len);
   }
 }
 
 export const retto = {
   init: (onProgress?: (ratio: number) => void) => Retto.init(onProgress),
-  recognize: async (data: Uint8Array | ArrayBuffer) => {
-    const engine = await Retto.init();
-    return engine.recognize(data);
-  },
+  recognize: (data: Uint8Array | ArrayBuffer) =>
+    Retto.init().then((engine) => engine.recognize(data)),
 };

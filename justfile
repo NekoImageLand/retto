@@ -7,6 +7,8 @@ setup:
     rustup toolchain install nightly --profile complete
     rustup target add wasm32-unknown-emscripten --toolchain nightly
 
+check: fmt-check clippy-check build-check
+
 fmt-check: setup
     cargo +nightly fmt --all -- --check
 
