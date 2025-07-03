@@ -236,7 +236,6 @@ export class Retto {
     }
   }
 
-  // TODO: concurrency
   async *recognize(
     data: Uint8Array | ArrayBuffer,
   ): AsyncGenerator<RettoWorkerStage, void, unknown> {

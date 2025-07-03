@@ -1,7 +1,7 @@
 set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
 
 clean:
-    cargo clean; rm -r retto-core/models; rm -r retto-wasm/fe/retto_wasm.*; rm -r retto-wasm/fe/dist; rm -r retto-wasm/fe/node_modules
+    cargo clean; rm -r retto-core/models; rm -r retto-wasm/fe/retto_wasm.*; rm -r retto-wasm/fe/*.tgz; rm -r retto-wasm/fe/dist; rm -r retto-wasm/fe/node_modules
 
 setup:
     rustup toolchain install nightly --profile complete
