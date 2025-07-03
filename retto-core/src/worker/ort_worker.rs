@@ -84,6 +84,7 @@ impl RettoWorkerModelProviderBuilder for RettoOrtWorkerModelProvider {
         })
     }
 
+    #[cfg(feature = "download-models")]
     fn from_local_v4_blob_default() -> Self {
         Self(RettoWorkerModelProvider {
             det: RettoWorkerModelSource::Blob(
@@ -95,6 +96,15 @@ impl RettoWorkerModelProviderBuilder for RettoOrtWorkerModelProvider {
             cls: RettoWorkerModelSource::Blob(
                 include_bytes!("../../models/ch_ppocr_mobile_v2.0_cls_infer.onnx").to_vec(),
             ),
+        })
+    }
+
+    #[cfg(not(feature = "download-models"))]
+    fn from_local_v4_blob_default() -> Self {
+        Self(RettoWorkerModelProvider {
+            det: RettoWorkerModelSource::Blob(Vec::new()),
+            rec: RettoWorkerModelSource::Blob(Vec::new()),
+            cls: RettoWorkerModelSource::Blob(Vec::new()),
         })
     }
 }

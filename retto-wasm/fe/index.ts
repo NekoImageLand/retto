@@ -47,6 +47,17 @@ declare const RettoInner: {
   HEAPU8: Uint8Array;
   _alloc(n: number): number;
   _dealloc(p: number, n: number): void;
+  _retto_init(
+    det_ptr: number,
+    det_len: number,
+    cls_ptr: number,
+    cls_len: number,
+    rec_ptr: number,
+    rec_len: number,
+    rec_dict_ptr: number,
+    rec_dict_len: number,
+  ): void;
+  _retto_embed_init(): void;
   _retto_rec(ptr: number, len: number): void;
   onRettoNotifyDetDone(res: string): void;
   onRettoNotifyClsDone(res: string): void;
@@ -125,6 +136,13 @@ class WasmBufferManager {
   }
 }
 
+export interface RettoModel {
+  det_model: ArrayBuffer;
+  cls_model: ArrayBuffer;
+  rec_model: ArrayBuffer;
+  rec_dict: ArrayBuffer;
+}
+
 export class Retto {
   private bufferManager: WasmBufferManager;
   private static inner: Promise<Retto> | null = null;
@@ -133,7 +151,7 @@ export class Retto {
     this.bufferManager = new WasmBufferManager(module);
   }
 
-  static init(onProgress?: (ratio: number) => void): Promise<Retto> {
+  static load(onProgress?: (ratio: number) => void): Promise<Retto> {
     if (!this.inner) {
       this.inner = (async () => {
         const wasmUrl = new URL("public/retto_wasm.wasm", import.meta.url).href;
@@ -153,6 +171,39 @@ export class Retto {
     return this.inner;
   }
 
+  get is_embed_build(): boolean {
+    return this.module._retto_embed_init !== undefined;
+  }
+
+  async init(models?: RettoModel) {
+    if (!this.is_embed_build && !models) {
+      throw new Error("Models are required for this build.");
+    }
+    if (models) {
+      const { det_model, cls_model, rec_model, rec_dict } = models;
+      await this.bufferManager.ctxRegions([
+        det_model,
+        cls_model,
+        rec_model,
+        rec_dict,
+      ], (det_r, cls_r, rec_r, rec_dict_r) => {
+        this.module._retto_init(
+          det_r.ptr,
+          det_r.len,
+          cls_r.ptr,
+          cls_r.len,
+          rec_r.ptr,
+          rec_r.len,
+          rec_dict_r.ptr,
+          rec_dict_r.len,
+        );
+      });
+    } else {
+      this.module._retto_embed_init();
+    }
+  }
+
+  // TODO: concurrency
   async *recognize(
     data: Uint8Array | ArrayBuffer,
   ): AsyncGenerator<RettoWorkerStage, void, unknown> {
@@ -183,9 +234,3 @@ export class Retto {
     );
   }
 }
-
-export const retto = {
-  init: (onProgress?: (ratio: number) => void) => Retto.init(onProgress),
-  recognize: (data: Uint8Array | ArrayBuffer) =>
-    Retto.init().then((engine) => engine.recognize(data)),
-};

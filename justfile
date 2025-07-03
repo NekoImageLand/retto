@@ -22,7 +22,7 @@ build-cli: setup
     cargo build -p retto-cli --features "hf-hub" --release
 
 build-wasm-lib: setup
-    cd retto-wasm && cargo +nightly build --target wasm32-unknown-emscripten --all-features --release
+    cd retto-wasm && cargo +nightly build --target wasm32-unknown-emscripten --release
 
 build-wasm-fe: setup
     cp target/wasm32-unknown-emscripten/release/retto_wasm.* retto-wasm/fe

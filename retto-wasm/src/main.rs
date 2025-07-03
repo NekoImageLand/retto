@@ -19,17 +19,8 @@ static GLOBAL_TRACING: Lazy<Mutex<()>> = Lazy::new(|| {
     Mutex::new(())
 });
 
-static GLOBAL_SESSION: Lazy<Mutex<RettoSession<RettoOrtWorker>>> = Lazy::new(|| {
-    let session: RettoSession<RettoOrtWorker> = RettoSession::new(RettoSessionConfig {
-        worker_config: RettoOrtWorkerConfig {
-            device: RettoOrtWorkerDevice::CPU,
-            models: RettoOrtWorkerModelProvider::from_local_v4_blob_default(),
-        },
-        ..Default::default()
-    })
-    .expect("Failed to create RettoSession");
-    Mutex::new(session)
-});
+static GLOBAL_SESSION: Lazy<Mutex<Option<RettoSession<RettoOrtWorker>>>> =
+    Lazy::new(|| Mutex::new(None));
 
 #[unsafe(no_mangle)]
 pub extern "C" fn alloc(size: usize) -> *mut c_void {
@@ -49,6 +40,7 @@ pub extern "C" fn dealloc(ptr: *mut c_void, size: usize) {
     }
 }
 
+// TODO: add these a session_id (provided by JS) to support multiple sessions
 em_js!((), retto_notyfy_det_done, (msg: *const c_char), {
     if (Module.onRettoNotifyDetDone) {
         Module.onRettoNotifyDetDone(UTF8ToString(msg));
@@ -72,6 +64,67 @@ unsafe extern "C" {
     fn emscripten_sync_run_in_main_runtime_thread_(sig: c_uint, func_ptr: *mut c_void, ...) -> i32;
 }
 
+#[allow(clippy::too_many_arguments)]
+#[unsafe(no_mangle)]
+/// # Safety
+/// Make clippy happy!
+pub unsafe extern "C" fn retto_init(
+    det_ptr: *const u8,
+    det_len: usize,
+    cls_ptr: *const u8,
+    cls_len: usize,
+    rec_ptr: *const u8,
+    rec_len: usize,
+    rec_dict_ptr: *const u8,
+    rec_dict_len: usize,
+) {
+    Lazy::force(&GLOBAL_TRACING);
+    let det_model = unsafe { std::slice::from_raw_parts(det_ptr, det_len).to_vec() };
+    let cls_model = unsafe { std::slice::from_raw_parts(cls_ptr, cls_len).to_vec() };
+    let rec_model = unsafe { std::slice::from_raw_parts(rec_ptr, rec_len).to_vec() };
+    let rec_dict = unsafe { std::slice::from_raw_parts(rec_dict_ptr, rec_dict_len).to_vec() };
+    let mut guard = GLOBAL_SESSION.lock().unwrap();
+    guard.get_or_insert_with(|| {
+        RettoSession::new(RettoSessionConfig {
+            worker_config: RettoOrtWorkerConfig {
+                device: RettoOrtWorkerDevice::CPU,
+                models: RettoOrtWorkerModelProvider(RettoWorkerModelProvider {
+                    det: RettoWorkerModelSource::Blob(det_model),
+                    rec: RettoWorkerModelSource::Blob(rec_model),
+                    cls: RettoWorkerModelSource::Blob(cls_model),
+                }),
+            },
+            rec_processor_config: RecProcessorConfig {
+                character_source: RecCharacterDictProvider::OutSide(RettoWorkerModelSource::Blob(
+                    rec_dict,
+                )),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .expect("Failed to create RettoSession")
+    });
+}
+
+#[cfg(feature = "download-models")]
+#[unsafe(no_mangle)]
+/// # Safety
+/// Make clippy happy!
+pub unsafe extern "C" fn retto_embed_init() {
+    Lazy::force(&GLOBAL_TRACING);
+    let mut guard = GLOBAL_SESSION.lock().unwrap();
+    guard.get_or_insert_with(|| {
+        RettoSession::new(RettoSessionConfig {
+            worker_config: RettoOrtWorkerConfig {
+                device: RettoOrtWorkerDevice::CPU,
+                models: RettoOrtWorkerModelProvider::from_local_v4_blob_default(),
+            },
+            ..Default::default()
+        })
+        .expect("Failed to create RettoSession")
+    });
+}
+
 #[allow(clippy::erasing_op, clippy::identity_op)] // simulate C macro behavior
 #[unsafe(no_mangle)]
 /// # Safety
@@ -80,15 +133,15 @@ pub unsafe extern "C" fn retto_rec(image_data_ptr: *const u8, image_data_len: u3
     let image_data =
         unsafe { std::slice::from_raw_parts(image_data_ptr, image_data_len as usize).to_vec() };
     thread::spawn(move || {
-        Lazy::force(&GLOBAL_TRACING);
         let (tx, rx) = std::sync::mpsc::channel::<RettoWorkerStageResult>();
         thread::spawn(move || {
-            let mut session = GLOBAL_SESSION
+            GLOBAL_SESSION
                 .lock()
-                .expect("Failed to lock RettoSession mutex");
-            session
+                .unwrap()
+                .as_mut()
+                .expect("You must call retto_init before retto_rec!")
                 .run_stream(image_data, tx)
-                .expect("Failed to run RettoSession stream")
+                .expect("Failed to run RettoSession stream");
         });
         const EMSCRIPTEN_SIG: c_uint = 0 | 1 << 25 | 0 << (2 * 0); // aka EM_FUNC_SIG_VI, TODO: use enum
         for stage in rx {

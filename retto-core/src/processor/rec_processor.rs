@@ -115,10 +115,13 @@ impl Default for RecProcessorConfig {
         let character_source = RecCharacterDictProvider::OutSide(RettoWorkerModelSource::Path(
             "ppocr_keys_v1.txt".into(),
         ));
-        #[cfg(target_family = "wasm")]
+        #[cfg(all(feature = "download-models", target_family = "wasm"))]
         let character_source = RecCharacterDictProvider::OutSide(RettoWorkerModelSource::Blob(
             include_bytes!("../../models/ppocr_keys_v1.txt").to_vec(),
         ));
+        #[cfg(all(not(feature = "download-models"), target_family = "wasm"))]
+        let character_source =
+            RecCharacterDictProvider::OutSide(RettoWorkerModelSource::Blob(Vec::new()));
         RecProcessorConfig {
             character_source,
             image_shape: [3, 48, 320],
