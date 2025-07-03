@@ -11,6 +11,7 @@ use std::sync::Mutex;
 use std::{alloc, thread};
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::prelude::*;
+use uuid::Uuid;
 
 static GLOBAL_TRACING: Lazy<Mutex<()>> = Lazy::new(|| {
     let stdout = tracing_subscriber::fmt::layer()
@@ -40,22 +41,21 @@ pub extern "C" fn dealloc(ptr: *mut c_void, size: usize) {
     }
 }
 
-// TODO: add these a session_id (provided by JS) to support multiple sessions
-em_js!((), retto_notify_det_done, (msg: *const c_char), {
+em_js!((), retto_notify_det_done, (session_id: *const c_char, msg: *const c_char), {
     if (Module.onRettoNotifyDetDone) {
-        Module.onRettoNotifyDetDone(UTF8ToString(msg));
+        Module.onRettoNotifyDetDone(UTF8ToString(session_id), UTF8ToString(msg));
     }
 });
 
-em_js!((), retto_notify_cls_done, (msg: *const c_char), {
+em_js!((), retto_notify_cls_done, (session_id: *const c_char, msg: *const c_char), {
     if (Module.onRettoNotifyClsDone) {
-        Module.onRettoNotifyClsDone(UTF8ToString(msg));
+        Module.onRettoNotifyClsDone(UTF8ToString(session_id), UTF8ToString(msg));
     }
 });
 
-em_js!((), retto_notify_rec_done, (msg: *const c_char), {
+em_js!((), retto_notify_rec_done, (session_id: *const c_char, msg: *const c_char), {
     if (Module.onRettoNotifyRecDone) {
-        Module.onRettoNotifyRecDone(UTF8ToString(msg));
+        Module.onRettoNotifyRecDone(UTF8ToString(session_id), UTF8ToString(msg));
     }
 });
 
@@ -106,7 +106,7 @@ pub unsafe extern "C" fn retto_init(
     });
 }
 
-#[cfg(feature = "download-models")]
+#[cfg(feature = "embed-models")]
 #[unsafe(no_mangle)]
 /// # Safety
 /// Make clippy happy!
@@ -129,9 +129,16 @@ pub unsafe extern "C" fn retto_embed_init() {
 #[unsafe(no_mangle)]
 /// # Safety
 /// Make clippy happy!
-pub unsafe extern "C" fn retto_rec(image_data_ptr: *const u8, image_data_len: u32) {
+pub unsafe extern "C" fn retto_rec(
+    image_data_ptr: *const u8,
+    image_data_len: u32,
+) -> *const c_char {
+    let session_uuid = Uuid::new_v4();
     let image_data =
         unsafe { std::slice::from_raw_parts(image_data_ptr, image_data_len as usize).to_vec() };
+    let session_uuid_c =
+        CString::new(session_uuid.to_string()).expect("Failed to create CString for session UUID");
+    let session_uuid_ptr = session_uuid_c.as_ptr();
     thread::spawn(move || {
         let (tx, rx) = std::sync::mpsc::channel::<RettoWorkerStageResult>();
         thread::spawn(move || {
@@ -143,31 +150,37 @@ pub unsafe extern "C" fn retto_rec(image_data_ptr: *const u8, image_data_len: u3
                 .run_stream(image_data, tx)
                 .expect("Failed to run RettoSession stream");
         });
-        const EMSCRIPTEN_SIG: c_uint = 0 | 1 << 25 | 0 << (2 * 0); // aka EM_FUNC_SIG_VI, TODO: use enum
+        let session_uuid_c = session_uuid_c.clone();
+        let session_uuid_ptr = session_uuid_c.as_ptr() as *const c_char;
+        const EM_FUNC_SIG_VII: c_uint = 0 | 2 << 25 | 0 << (2 * 0) | 0 << (2 * 1); // TODO: use enum
         for stage in rx {
             let res_str =
                 serde_json::to_string(&stage).expect("Failed to serialize RettoWorkerStageResult");
             let res_cstr = CString::new(res_str).expect("Failed to create CString");
-            let ptr: *const c_char = res_cstr.as_ptr();
+            let ptr = res_cstr.as_ptr() as *const c_char;
             let _ = unsafe {
                 match stage {
                     RettoWorkerStageResult::Det(_) => emscripten_sync_run_in_main_runtime_thread_(
-                        EMSCRIPTEN_SIG,
+                        EM_FUNC_SIG_VII,
                         retto_notify_det_done as *mut c_void,
-                        ptr as *const c_char,
+                        session_uuid_ptr,
+                        ptr,
                     ),
                     RettoWorkerStageResult::Cls(_) => emscripten_sync_run_in_main_runtime_thread_(
-                        EMSCRIPTEN_SIG,
+                        EM_FUNC_SIG_VII,
                         retto_notify_cls_done as *mut c_void,
-                        ptr as *const c_char,
+                        session_uuid_ptr,
+                        ptr,
                     ),
                     RettoWorkerStageResult::Rec(_) => emscripten_sync_run_in_main_runtime_thread_(
-                        EMSCRIPTEN_SIG,
+                        EM_FUNC_SIG_VII,
                         retto_notify_rec_done as *mut c_void,
-                        ptr as *const c_char,
+                        session_uuid_ptr,
+                        ptr,
                     ),
                 }
             };
         }
     });
+    session_uuid_ptr
 }

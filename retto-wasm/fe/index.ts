@@ -45,6 +45,7 @@ export type RettoWorkerStage =
 
 declare const RettoInner: {
   HEAPU8: Uint8Array;
+  UTF8ToString(ptr: number): string;
   _alloc(n: number): number;
   _dealloc(p: number, n: number): void;
   _retto_init(
@@ -58,10 +59,10 @@ declare const RettoInner: {
     rec_dict_len: number,
   ): void;
   _retto_embed_init(): void;
-  _retto_rec(ptr: number, len: number): void;
-  onRettoNotifyDetDone(res: string): void;
-  onRettoNotifyClsDone(res: string): void;
-  onRettoNotifyRecDone(res: string): void;
+  _retto_rec(ptr: number, len: number): number;
+  onRettoNotifyDetDone(sessionId: string, msg: string): void;
+  onRettoNotifyClsDone(sessionId: string, msg: string): void;
+  onRettoNotifyRecDone(sessionId: string, msg: string): void;
 };
 
 type BufferData = Uint8Array | ArrayBuffer;
@@ -146,9 +147,11 @@ export interface RettoModel {
 export class Retto {
   private bufferManager: WasmBufferManager;
   private static inner: Promise<Retto> | null = null;
+  private emitter = new EventTarget();
 
   private constructor(private module: typeof RettoInner) {
     this.bufferManager = new WasmBufferManager(module);
+    this.registerCallbacks();
   }
 
   static load(onProgress?: (ratio: number) => void): Promise<Retto> {
@@ -173,6 +176,36 @@ export class Retto {
 
   get is_embed_build(): boolean {
     return this.module._retto_embed_init !== undefined;
+  }
+
+  private registerCallbacks() {
+    this.module.onRettoNotifyDetDone = (sessionId, msg) => {
+      try {
+        console.log("Det done:", sessionId, msg);
+        const data = JSON.parse(msg) as DetProcessorResult;
+        this.emitter.dispatchEvent(
+          new CustomEvent(`${sessionId}:det`, { detail: data }),
+        );
+      } catch {}
+    };
+    this.module.onRettoNotifyClsDone = (sessionId, msg) => {
+      try {
+        console.log("Cls done:", sessionId, msg);
+        const data = JSON.parse(msg) as ClsProcessorResult;
+        this.emitter.dispatchEvent(
+          new CustomEvent(`${sessionId}:cls`, { detail: data }),
+        );
+      } catch {}
+    };
+    this.module.onRettoNotifyRecDone = (sessionId, msg) => {
+      try {
+        console.log("Rec done:", sessionId, msg);
+        const data = JSON.parse(msg) as RecProcessorResult;
+        this.emitter.dispatchEvent(
+          new CustomEvent(`${sessionId}:rec`, { detail: data }),
+        );
+      } catch {}
+    };
   }
 
   async init(models?: RettoModel) {
@@ -208,27 +241,28 @@ export class Retto {
     data: Uint8Array | ArrayBuffer,
   ): AsyncGenerator<RettoWorkerStage, void, unknown> {
     const module = this.module;
+    const emitter = this.emitter;
     yield* this.bufferManager.ctxGen(
       data,
       async function* (ptr: number, len: number) {
-        const detP = new Promise<DetProcessorResult>((resolve) => {
-          module.onRettoNotifyDetDone = (res) =>
-            resolve(JSON.parse(res) as DetProcessorResult);
-        });
-        const clsP = new Promise<ClsProcessorResult>((resolve) => {
-          module.onRettoNotifyClsDone = (res) =>
-            resolve(JSON.parse(res) as ClsProcessorResult);
-        });
-        const recP = new Promise<RecProcessorResult>((resolve) => {
-          module.onRettoNotifyRecDone = (res) =>
-            resolve(JSON.parse(res) as RecProcessorResult);
-        });
-        module._retto_rec(ptr, len);
-        const det = await detP;
+        const sessionPtr = module._retto_rec(ptr, len);
+        const sessionId = module.UTF8ToString(sessionPtr);
+        function once<T>(stage: string): Promise<T> {
+          return new Promise((resolve) => {
+            const eventName = `${sessionId}:${stage}`;
+            const handler = (e: Event) => {
+              const data = (e as CustomEvent).detail as T;
+              resolve(data);
+              emitter.removeEventListener(eventName, handler);
+            };
+            emitter.addEventListener(eventName, handler);
+          });
+        }
+        const det = await once<DetProcessorResult>("det");
         yield { stage: "det", result: det };
-        const cls = await clsP;
+        const cls = await once<ClsProcessorResult>("cls");
         yield { stage: "cls", result: cls };
-        const rec = await recP;
+        const rec = await once<RecProcessorResult>("rec");
         yield { stage: "rec", result: rec };
       },
     );
