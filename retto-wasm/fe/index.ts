@@ -47,15 +47,91 @@ declare const RettoInner: {
   HEAPU8: Uint8Array;
   _alloc(n: number): number;
   _dealloc(p: number, n: number): void;
-  _retto(ptr: number, len: number): void;
+  _retto_rec(ptr: number, len: number): void;
   onRettoNotifyDetDone(res: string): void;
   onRettoNotifyClsDone(res: string): void;
   onRettoNotifyRecDone(res: string): void;
 };
 
+type BufferData = Uint8Array | ArrayBuffer;
+
+interface BufferRegion {
+  ptr: number;
+  len: number;
+}
+
+class WasmBufferManager {
+  constructor(private module: typeof RettoInner) {}
+
+  private allocOne(data: BufferData): BufferRegion {
+    const bytes = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
+    const ptr = this.module._alloc(bytes.length);
+    this.module.HEAPU8.set(bytes, ptr);
+    return { ptr, len: bytes.length };
+  }
+
+  private deallocOne({ ptr, len }: BufferRegion): void {
+    this.module._dealloc(ptr, len);
+  }
+
+  async ctx<T>(
+    data: BufferData,
+    fn: (ptr: number, len: number) => Promise<T> | T,
+  ): Promise<T> {
+    const region = this.allocOne(data);
+    try {
+      const res = fn(region.ptr, region.len);
+      return res instanceof Promise ? await res : res;
+    } finally {
+      this.deallocOne(region);
+    }
+  }
+
+  async *ctxGen<T>(
+    data: BufferData,
+    fn: (ptr: number, len: number) => AsyncGenerator<T, void, unknown>,
+  ): AsyncGenerator<T, void, unknown> {
+    const region = this.allocOne(data);
+    try {
+      const gen = fn(region.ptr, region.len);
+      for await (const v of gen) {
+        yield v;
+      }
+    } finally {
+      this.deallocOne(region);
+    }
+  }
+
+  async ctxRegions<
+    T extends BufferData[],
+    R,
+  >(
+    datas: [...T],
+    fn: (...regions: { [K in keyof T]: BufferRegion }) => Promise<R> | R,
+  ): Promise<R> {
+    const regions: BufferRegion[] = [];
+    try {
+      for (const d of datas) {
+        regions.push(this.allocOne(d));
+      }
+      const tupleRegions = regions as { [K in keyof T]: BufferRegion };
+      const result = fn(...tupleRegions);
+      return result instanceof Promise ? await result : result;
+    } finally {
+      for (const reg of regions.reverse()) {
+        this.deallocOne(reg);
+      }
+    }
+  }
+}
+
 export class Retto {
-  private constructor(private module: typeof RettoInner) {}
+  private bufferManager: WasmBufferManager;
   private static inner: Promise<Retto> | null = null;
+
+  private constructor(private module: typeof RettoInner) {
+    this.bufferManager = new WasmBufferManager(module);
+  }
 
   static init(onProgress?: (ratio: number) => void): Promise<Retto> {
     if (!this.inner) {
@@ -80,30 +156,31 @@ export class Retto {
   async *recognize(
     data: Uint8Array | ArrayBuffer,
   ): AsyncGenerator<RettoWorkerStage, void, unknown> {
-    const bytes = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
-    const len = bytes.length;
-    const ptr = this.module._alloc(len);
-    this.module.HEAPU8.set(bytes, ptr);
-    const detP = new Promise<DetProcessorResult>((resolve) => {
-      this.module.onRettoNotifyDetDone = (res) =>
-        resolve(JSON.parse(res) as DetProcessorResult);
-    });
-    const clsP = new Promise<ClsProcessorResult>((resolve) => {
-      this.module.onRettoNotifyClsDone = (res) =>
-        resolve(JSON.parse(res) as ClsProcessorResult);
-    });
-    const recP = new Promise<RecProcessorResult>((resolve) => {
-      this.module.onRettoNotifyRecDone = (res) =>
-        resolve(JSON.parse(res) as RecProcessorResult);
-    });
-    this.module._retto(ptr, len);
-    const det = await detP;
-    yield { stage: "det", result: det };
-    const cls = await clsP;
-    yield { stage: "cls", result: cls };
-    const rec = await recP;
-    yield { stage: "rec", result: rec };
-    this.module._dealloc(ptr, len);
+    const module = this.module;
+    yield* this.bufferManager.ctxGen(
+      data,
+      async function* (ptr: number, len: number) {
+        const detP = new Promise<DetProcessorResult>((resolve) => {
+          module.onRettoNotifyDetDone = (res) =>
+            resolve(JSON.parse(res) as DetProcessorResult);
+        });
+        const clsP = new Promise<ClsProcessorResult>((resolve) => {
+          module.onRettoNotifyClsDone = (res) =>
+            resolve(JSON.parse(res) as ClsProcessorResult);
+        });
+        const recP = new Promise<RecProcessorResult>((resolve) => {
+          module.onRettoNotifyRecDone = (res) =>
+            resolve(JSON.parse(res) as RecProcessorResult);
+        });
+        module._retto_rec(ptr, len);
+        const det = await detP;
+        yield { stage: "det", result: det };
+        const cls = await clsP;
+        yield { stage: "cls", result: cls };
+        const rec = await recP;
+        yield { stage: "rec", result: rec };
+      },
+    );
   }
 }
 

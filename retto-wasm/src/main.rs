@@ -76,7 +76,7 @@ unsafe extern "C" {
 #[unsafe(no_mangle)]
 /// # Safety
 /// Make clippy happy!
-pub unsafe extern "C" fn retto(image_data_ptr: *const u8, image_data_len: u32) {
+pub unsafe extern "C" fn retto_rec(image_data_ptr: *const u8, image_data_len: u32) {
     let image_data =
         unsafe { std::slice::from_raw_parts(image_data_ptr, image_data_len as usize).to_vec() };
     thread::spawn(move || {
