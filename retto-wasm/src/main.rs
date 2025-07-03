@@ -41,19 +41,19 @@ pub extern "C" fn dealloc(ptr: *mut c_void, size: usize) {
 }
 
 // TODO: add these a session_id (provided by JS) to support multiple sessions
-em_js!((), retto_notyfy_det_done, (msg: *const c_char), {
+em_js!((), retto_notify_det_done, (msg: *const c_char), {
     if (Module.onRettoNotifyDetDone) {
         Module.onRettoNotifyDetDone(UTF8ToString(msg));
     }
 });
 
-em_js!((), retto_notyfy_cls_done, (msg: *const c_char), {
+em_js!((), retto_notify_cls_done, (msg: *const c_char), {
     if (Module.onRettoNotifyClsDone) {
         Module.onRettoNotifyClsDone(UTF8ToString(msg));
     }
 });
 
-em_js!((), retto_notyfy_rec_done, (msg: *const c_char), {
+em_js!((), retto_notify_rec_done, (msg: *const c_char), {
     if (Module.onRettoNotifyRecDone) {
         Module.onRettoNotifyRecDone(UTF8ToString(msg));
     }
@@ -153,17 +153,17 @@ pub unsafe extern "C" fn retto_rec(image_data_ptr: *const u8, image_data_len: u3
                 match stage {
                     RettoWorkerStageResult::Det(_) => emscripten_sync_run_in_main_runtime_thread_(
                         EMSCRIPTEN_SIG,
-                        retto_notyfy_det_done as *mut c_void,
+                        retto_notify_det_done as *mut c_void,
                         ptr as *const c_char,
                     ),
                     RettoWorkerStageResult::Cls(_) => emscripten_sync_run_in_main_runtime_thread_(
                         EMSCRIPTEN_SIG,
-                        retto_notyfy_cls_done as *mut c_void,
+                        retto_notify_cls_done as *mut c_void,
                         ptr as *const c_char,
                     ),
                     RettoWorkerStageResult::Rec(_) => emscripten_sync_run_in_main_runtime_thread_(
                         EMSCRIPTEN_SIG,
-                        retto_notyfy_rec_done as *mut c_void,
+                        retto_notify_rec_done as *mut c_void,
                         ptr as *const c_char,
                     ),
                 }
