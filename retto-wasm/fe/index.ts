@@ -181,7 +181,7 @@ export class Retto {
   private registerCallbacks() {
     this.module.onRettoNotifyDetDone = (sessionId, msg) => {
       try {
-        console.log("Det done:", sessionId, msg);
+        console.debug("Det done:", sessionId, msg);
         const data = JSON.parse(msg) as DetProcessorResult;
         this.emitter.dispatchEvent(
           new CustomEvent(`${sessionId}:det`, { detail: data }),
@@ -190,7 +190,7 @@ export class Retto {
     };
     this.module.onRettoNotifyClsDone = (sessionId, msg) => {
       try {
-        console.log("Cls done:", sessionId, msg);
+        console.debug("Cls done:", sessionId, msg);
         const data = JSON.parse(msg) as ClsProcessorResult;
         this.emitter.dispatchEvent(
           new CustomEvent(`${sessionId}:cls`, { detail: data }),
@@ -199,7 +199,7 @@ export class Retto {
     };
     this.module.onRettoNotifyRecDone = (sessionId, msg) => {
       try {
-        console.log("Rec done:", sessionId, msg);
+        console.debug("Rec done:", sessionId, msg);
         const data = JSON.parse(msg) as RecProcessorResult;
         this.emitter.dispatchEvent(
           new CustomEvent(`${sessionId}:rec`, { detail: data }),
