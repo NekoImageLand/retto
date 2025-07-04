@@ -146,7 +146,6 @@ export interface RettoModel {
 
 export class Retto {
   private bufferManager: WasmBufferManager;
-  private static inner: Promise<Retto> | null = null;
   private emitter = new EventTarget();
 
   private constructor(private module: typeof RettoInner) {
@@ -154,24 +153,19 @@ export class Retto {
     this.registerCallbacks();
   }
 
-  static load(onProgress?: (ratio: number) => void): Promise<Retto> {
-    if (!this.inner) {
-      this.inner = (async () => {
-        const wasmUrl = new URL("public/retto_wasm.wasm", import.meta.url).href;
-        const resp = await axios.get<ArrayBuffer>(wasmUrl, {
-          responseType: "arraybuffer",
-          onDownloadProgress: (e) => {
-            if (e.total && onProgress) onProgress(e.loaded / e.total);
-          },
-        });
-        const mod = (await initWASI({
-          wasmBinary: resp.data,
-          locateFile: () => "",
-        })) as typeof RettoInner;
-        return new Retto(mod);
-      })();
-    }
-    return this.inner;
+  static async load(onProgress?: (ratio: number) => void): Promise<Retto> {
+    const wasmUrl = new URL("public/retto_wasm.wasm", import.meta.url).href;
+    const { data } = await axios.get<ArrayBuffer>(wasmUrl, {
+      responseType: "arraybuffer",
+      onDownloadProgress: ({ loaded, total }) => {
+        if (total && onProgress) onProgress(loaded / total);
+      },
+    });
+    const module = await initWASI({
+      wasmBinary: data,
+      locateFile: () => "",
+    }) as typeof RettoInner;
+    return new Retto(module);
   }
 
   get is_embed_build(): boolean {
