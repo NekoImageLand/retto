@@ -1,3 +1,4 @@
+#[cfg(feature = "backend-ort")]
 pub mod ort_worker;
 
 use crate::error::{RettoError, RettoResult};
@@ -97,6 +98,7 @@ pub trait RettoWorker: RettoInnerWorker {
 }
 
 pub mod prelude {
+    #[cfg(feature = "backend-ort")]
     pub use super::ort_worker::*;
     pub use super::{
         RettoWorkerModelProvider, RettoWorkerModelProviderBuilder, RettoWorkerModelSource,

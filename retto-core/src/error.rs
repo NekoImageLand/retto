@@ -6,6 +6,7 @@ pub enum RettoError {
     ImageError(#[from] image::ImageError),
     #[error(transparent)]
     ShapeError(#[from] ndarray::ShapeError),
+    #[cfg(feature = "backend-ort")]
     #[error(transparent)]
     OrtError(#[from] ort::error::Error),
     #[error(transparent)]

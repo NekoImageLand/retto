@@ -17,6 +17,7 @@ fn main() {
     let download_enabled = env::var("CARGO_FEATURE_DOWNLOAD_MODELS").is_ok();
     if !download_enabled {
         tracing::warn!("Model downloading is disabled");
+        return;
     }
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
     let model_dir = Path::new(&manifest_dir).join("models");

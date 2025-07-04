@@ -36,13 +36,13 @@ pub enum LimitType {
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DetProcessorConfig {
-    /// Preprocess
+    // Preprocess
     pub limit_side_len: usize,
     pub limit_type: LimitType,
     pub mean: Array1<f32>,
     pub std: Array1<f32>,
     pub scale: f32,
-    /// PostProcess
+    // PostProcess
     pub threch: f32,
     pub box_thresh: f32,
     pub max_candidates: usize,
