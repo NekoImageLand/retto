@@ -6,6 +6,7 @@ mod macros;
 
 use once_cell::sync::Lazy;
 use retto_core::prelude::*;
+use retto_core::serde::Serialize;
 use std::ffi::{CString, c_char, c_uint, c_void};
 use std::sync::Mutex;
 use std::{alloc, thread};
@@ -153,30 +154,35 @@ pub unsafe extern "C" fn retto_rec(
         let session_uuid_c = session_uuid_c.clone();
         let session_uuid_ptr = session_uuid_c.as_ptr() as *const c_char;
         const EM_FUNC_SIG_VII: c_uint = 0 | 2 << 25 | 0 << (2 * 0) | 0 << (2 * 1); // TODO: use enum
-        for stage in rx {
-            let res_str =
-                serde_json::to_string(&stage).expect("Failed to serialize RettoWorkerStageResult");
+        #[inline]
+        fn extract_res_cstr<T>(res: T) -> *const c_char
+        where
+            T: Serialize,
+        {
+            let res_str = serde_json::to_string(&res).expect("Failed to serialize result");
             let res_cstr = CString::new(res_str).expect("Failed to create CString");
-            let ptr = res_cstr.as_ptr() as *const c_char;
+            res_cstr.into_raw() as *const c_char
+        }
+        for stage in rx {
             let _ = unsafe {
                 match stage {
-                    RettoWorkerStageResult::Det(_) => emscripten_sync_run_in_main_runtime_thread_(
+                    RettoWorkerStageResult::Det(d) => emscripten_sync_run_in_main_runtime_thread_(
                         EM_FUNC_SIG_VII,
                         retto_notify_det_done as *mut c_void,
                         session_uuid_ptr,
-                        ptr,
+                        extract_res_cstr(d) as *mut c_void,
                     ),
-                    RettoWorkerStageResult::Cls(_) => emscripten_sync_run_in_main_runtime_thread_(
+                    RettoWorkerStageResult::Cls(c) => emscripten_sync_run_in_main_runtime_thread_(
                         EM_FUNC_SIG_VII,
                         retto_notify_cls_done as *mut c_void,
                         session_uuid_ptr,
-                        ptr,
+                        extract_res_cstr(c) as *mut c_void,
                     ),
-                    RettoWorkerStageResult::Rec(_) => emscripten_sync_run_in_main_runtime_thread_(
+                    RettoWorkerStageResult::Rec(r) => emscripten_sync_run_in_main_runtime_thread_(
                         EM_FUNC_SIG_VII,
                         retto_notify_rec_done as *mut c_void,
                         session_uuid_ptr,
-                        ptr,
+                        extract_res_cstr(r) as *mut c_void,
                     ),
                 }
             };

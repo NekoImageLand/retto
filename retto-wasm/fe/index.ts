@@ -8,13 +8,15 @@ export interface Point {
 }
 
 export interface PointBox {
-  topLeft: Point;
-  bottomRight: Point;
+  inner: [Point, Point, Point, Point];
 }
 
-export interface DetProcessorResult {
-  items: Array<{ box: PointBox; score: number }>;
+export interface DetProcessorInnerResult {
+  boxes: PointBox;
+  score: number;
 }
+
+export type DetProcessorResult = DetProcessorInnerResult[];
 
 export interface ClsPostProcessLabel {
   label: number;
@@ -25,9 +27,7 @@ export interface ClsProcessorSingleResult {
   label: ClsPostProcessLabel;
 }
 
-export interface ClsProcessorResult {
-  items: ClsProcessorSingleResult[];
-}
+export type ClsProcessorResult = ClsProcessorSingleResult[];
 
 export interface RecProcessorSingleResult {
   text: string;
@@ -180,7 +180,9 @@ export class Retto {
         this.emitter.dispatchEvent(
           new CustomEvent(`${sessionId}:det`, { detail: data }),
         );
-      } catch {}
+      } catch (e) {
+        console.error("Error parsing Det result:", e, msg);
+      }
     };
     this.module.onRettoNotifyClsDone = (sessionId, msg) => {
       try {
@@ -189,7 +191,9 @@ export class Retto {
         this.emitter.dispatchEvent(
           new CustomEvent(`${sessionId}:cls`, { detail: data }),
         );
-      } catch {}
+      } catch (e) {
+        console.error("Error parsing Cls result:", e, msg);
+      }
     };
     this.module.onRettoNotifyRecDone = (sessionId, msg) => {
       try {
@@ -198,7 +202,9 @@ export class Retto {
         this.emitter.dispatchEvent(
           new CustomEvent(`${sessionId}:rec`, { detail: data }),
         );
-      } catch {}
+      } catch (e) {
+        console.error("Error parsing Rec result:", e, msg);
+      }
     };
   }
 

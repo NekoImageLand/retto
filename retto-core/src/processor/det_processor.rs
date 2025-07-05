@@ -84,7 +84,14 @@ pub(crate) struct DetProcessor<'p> {
 
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct DetProcessorResult(pub Vec<(PointBox<OrderedFloat<f64>>, f32)>);
+pub struct DetProcessorInnerResult {
+    pub boxes: PointBox<OrderedFloat<f64>>,
+    pub score: f32,
+}
+
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct DetProcessorResult(pub Vec<DetProcessorInnerResult>);
 
 impl ProcessorInnerRes for DetProcessor<'_> {
     type FinalResult = DetProcessorResult;
@@ -264,7 +271,7 @@ impl ProcessorInner for DetProcessor<'_> {
         if let Some(ref k) = self.dilation_kernel {
             mask = grayscale_dilate(&mask, k);
         }
-        let mut boxes_pair: Vec<_> = find_contours::<i32>(&mask)
+        let mut boxes_res: Vec<_> = find_contours::<i32>(&mask)
             .iter()
             .filter_map(|contour| {
                 // #region boxes_from_bitmap
@@ -288,12 +295,15 @@ impl ProcessorInner for DetProcessor<'_> {
                 if pb_h <= OrderedFloat(3f64) || pb_w <= OrderedFloat(3f64) {
                     return None;
                 }
-                Some((point_box, mean_score))
+                Some(DetProcessorInnerResult {
+                    boxes: point_box,
+                    score: mean_score,
+                })
             })
             .collect();
         // #region sorted_boxes
-        boxes_pair.sort_by(|(b1, _), (b2, _)| {
-            let (c1, c2) = (b1.center_point(), b2.center_point());
+        boxes_res.sort_by(|r1, r2| {
+            let (c1, c2) = (r1.boxes.center_point(), r2.boxes.center_point());
             let (y1, y2) = (c1.y.into_inner(), c2.y.into_inner());
             if (y1 - y2).abs() < 10f64 {
                 let (x1, x2) = (c1.x.into_inner(), c2.x.into_inner());
@@ -302,7 +312,7 @@ impl ProcessorInner for DetProcessor<'_> {
                 y1.partial_cmp(&y2).unwrap()
             }
         });
-        Ok(DetProcessorResult(boxes_pair))
+        Ok(DetProcessorResult(boxes_res))
     }
 }
 

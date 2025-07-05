@@ -87,7 +87,7 @@ where
         let mut crop_images = det_res
             .0
             .iter()
-            .map(|(pb, _)| ImageHelper::new_from_rgb_image(image.get_crop_img(pb)))
+            .map(|res| ImageHelper::new_from_rgb_image(image.get_crop_img(&res.boxes)))
             .collect::<Vec<_>>();
         // Would it be better to come back later?
         callback(RettoWorkerStageResult::Det(det_res));
