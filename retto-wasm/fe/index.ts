@@ -34,9 +34,7 @@ export interface RecProcessorSingleResult {
   score: number;
 }
 
-export interface RecProcessorResult {
-  items: RecProcessorSingleResult[];
-}
+export type RecProcessorResult = RecProcessorSingleResult[];
 
 export type RettoWorkerStage =
   | { stage: "det"; result: DetProcessorResult }
