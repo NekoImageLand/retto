@@ -15,8 +15,8 @@ use tracing_subscriber::prelude::*;
 use uuid::Uuid;
 
 static GLOBAL_TRACING: Lazy<Mutex<()>> = Lazy::new(|| {
-    let stdout = tracing_subscriber::fmt::layer()
-        .with_filter(EnvFilter::new("ort=warn,retto_core=debug,retto_cli=debug"));
+    let stdout =
+        tracing_subscriber::fmt::layer().with_filter(EnvFilter::new("ort=warn,retto_core=debug"));
     tracing_subscriber::registry().with(stdout).init();
     Mutex::new(())
 });
