@@ -93,7 +93,7 @@ where
         // So we have to resample the point boxes (to ensure consistency of coordinates)...
         for res in &mut det_res.0 {
             res.boxes
-                .scale_and_clip(ratio_h as f64, ratio_w as f64, ori_h as f64, ori_w as f64);
+                .scale_and_clip(after_w as f64, after_h as f64, ori_w as f64, ori_h as f64);
         }
         callback(RettoWorkerStageResult::Det(det_res));
         let cls = ClsProcessor::new(&self.config.cls_processor_config);
