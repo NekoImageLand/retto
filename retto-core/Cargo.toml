@@ -23,6 +23,14 @@ ort = { workspace = true, optional = true, default-features = false }
 ort-sys = { workspace = true, optional = true, default-features = false } # https://github.com/pykeio/ort/issues/399
 tracing.workspace = true
 hf-hub = { workspace = true, optional = true }
+rstest = "0.25.0"
+
+[dev-dependencies]
+reqwest = { workspace = true, features = ["blocking"] }
+ab_glyph.workspace = true
+rstest.workspace = true
+anyhow.workspace = true
+once_cell.workspace = true
 
 [build-dependencies]
 hf-hub.workspace = true

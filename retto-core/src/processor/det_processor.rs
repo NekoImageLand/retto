@@ -85,7 +85,7 @@ pub(crate) struct DetProcessor<'p> {
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DetProcessorInnerResult {
-    pub boxes: PointBox<OrderedFloat<f64>>,
+    pub boxes: PointBox<OrderedFloat<f32>>,
     pub score: f32,
 }
 
@@ -201,14 +201,14 @@ impl<'a> DetProcessor<'a> {
         if count > 0 { sum / count as f32 } else { 0.0 }
     }
 
-    fn unclip<T>(&self, point_box: &PointBox<T>) -> Vec<ImagePoint<OrderedFloat<f64>>>
+    fn unclip<T>(&self, point_box: &PointBox<T>) -> Vec<ImagePoint<OrderedFloat<f32>>>
     where
-        T: Into<f64> + Num + NumCast + Signed + Copy + Ord + Debug,
+        T: AsPrimitive<f32> + Num + NumCast + Signed + Copy + Ord + Debug,
     {
-        let exterior_coords: Vec<Coord<f64>> = point_box
+        let exterior_coords: Vec<Coord<f32>> = point_box
             .points()
             .iter()
-            .map(|p| Coord::from((p.x.into(), p.y.into())))
+            .map(|p| Coord::from((p.x.as_(), p.y.as_())))
             .collect();
         let polygon = Polygon::new(LineString(exterior_coords), vec![]);
         let area = polygon.unsigned_area();
@@ -217,8 +217,8 @@ impl<'a> DetProcessor<'a> {
                 .interiors()
                 .iter()
                 .map(|ring| Euclidean.length(ring))
-                .sum::<f64>();
-        let distance = area * (self.config.unclip_ratio as f64) / perimeter;
+                .sum::<f32>();
+        let distance = area * (self.config.unclip_ratio) / perimeter;
         let offset_polys =
             polygon.offset(distance, JoinType::Round(0.5), EndType::ClosedPolygon, 1.0);
         offset_polys
@@ -292,7 +292,7 @@ impl ProcessorInner for DetProcessor<'_> {
                 point_box.scale_and_clip(w as f64, h as f64, self.ori_w as f64, self.ori_h as f64);
                 // #region filter_det_res
                 let (pb_h, pb_w) = (point_box.height_tlc(), point_box.width_tlc());
-                if pb_h <= OrderedFloat(3f64) || pb_w <= OrderedFloat(3f64) {
+                if pb_h <= OrderedFloat(3f32) || pb_w <= OrderedFloat(3f32) {
                     return None;
                 }
                 Some(DetProcessorInnerResult {
@@ -305,7 +305,7 @@ impl ProcessorInner for DetProcessor<'_> {
         boxes_res.sort_by(|r1, r2| {
             let (c1, c2) = (r1.boxes.center_point(), r2.boxes.center_point());
             let (y1, y2) = (c1.y.into_inner(), c2.y.into_inner());
-            if (y1 - y2).abs() < 10f64 {
+            if (y1 - y2).abs() < 10f32 {
                 let (x1, x2) = (c1.x.into_inner(), c2.x.into_inner());
                 x1.partial_cmp(&x2).unwrap()
             } else {

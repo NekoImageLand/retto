@@ -32,6 +32,9 @@ tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 hf-hub = "0.4.3"
 uuid = { version = "1.17.0", features = ["v4"] }
+reqwest = "0.12.22"
+ab_glyph = { version = "0.2.30", features = ["std", "variable-fonts"] }
+rstest = "0.25.0"
 
 [patch.crates-io]
 clipper-sys = { git = "https://github.com/NekoImageLand/clipper-sys", branch = "master" }

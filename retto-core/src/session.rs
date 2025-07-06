@@ -142,3 +142,115 @@ where
         })
     }
 }
+
+// allow us auto download models
+#[cfg(all(test, feature = "hf-hub", feature = "backend-ort"))]
+mod tests {
+    use crate::points::Point;
+    use crate::prelude::*;
+    use ab_glyph::{FontVec, PxScale};
+    use anyhow::Result as AnyResult;
+    use image::{ImageFormat, Rgb, RgbImage};
+    use imageproc::definitions::HasWhite;
+    use imageproc::drawing::draw_text_mut;
+    use imageproc::geometric_transformations::{Interpolation, rotate_about_center};
+    use num_traits::abs;
+    use once_cell::sync::Lazy;
+    use ordered_float::OrderedFloat;
+    use rstest::*;
+    use std::io::Cursor;
+
+    static GLOBAL_FONT: Lazy<FontVec> = Lazy::new(|| {
+        let fonts = reqwest::blocking::get(
+            "https://github.com/adobe-fonts/source-han-sans/raw/release/Variable/OTF/SourceHanSansSC-VF.otf",
+        ).expect("Failed to download font");
+        let fonts_bin = fonts.bytes().expect("Failed to read font from bytes");
+        // save
+        FontVec::try_from_vec(fonts_bin.to_vec()).expect("Failed to load font")
+    });
+
+    #[fixture]
+    fn session() -> RettoSession<RettoOrtWorker> {
+        let cfg = RettoSessionConfig {
+            worker_config: RettoOrtWorkerConfig::default(),
+            ..Default::default()
+        };
+        RettoSession::new(cfg).expect("Failed to create RettoSession")
+    }
+
+    fn points_range(lhs: &Point<OrderedFloat<f32>>, x: f32, y: f32) -> f32 {
+        let rhs = Point::new(OrderedFloat(x), OrderedFloat(y));
+        abs(lhs.range(&rhs))
+    }
+
+    fn draw_text(
+        font: &FontVec,
+        text: &str,
+        px: PxScale,
+        w: u32,
+        h: u32,
+        x: i32,
+        y: i32,
+    ) -> RgbImage {
+        let mut image = RgbImage::new(w, h);
+        draw_text_mut(&mut image, Rgb::white(), x, y, px, &font, text);
+        image.save("test_small_image.png").unwrap();
+        image
+    }
+
+    fn rotate_text(image: &RgbImage, angle: f32) -> RgbImage {
+        let angle = angle.to_radians();
+        rotate_about_center(&image, angle, Interpolation::Bilinear, Rgb([0, 0, 0]))
+    }
+
+    #[rstest]
+    fn test_small_image(mut session: RettoSession<RettoOrtWorker>) -> AnyResult<()> {
+        let text = "玩原神玩的";
+        let (w, h) = (200.0, 50.0);
+        let image = draw_text(
+            &GLOBAL_FONT,
+            text,
+            PxScale::from(20.0),
+            w as u32,
+            h as u32,
+            0,
+            0,
+        );
+        let image = rotate_text(&image, 180.0);
+        let mut buf = Vec::new();
+        image.write_to(&mut Cursor::new(&mut buf), ImageFormat::Png)?;
+        let res = session.run(buf)?;
+        println!("{:?}", res);
+        let point_box = &res.det_result.0[0].boxes;
+        assert!(points_range(point_box.br(), w, h) < 10f32);
+        assert_eq!(res.cls_result.0[0].label.label, 180);
+        assert_eq!(res.rec_result.0[0].text, text);
+        Ok(())
+    }
+
+    #[rstest]
+    // https://github.com/NekoImageLand/retto/commit/7fc4127b
+    fn test_large_image(mut session: RettoSession<RettoOrtWorker>) -> AnyResult<()> {
+        let text = "玩原神玩的";
+        let (w, h) = (7680.0, 4320.0);
+        let image = draw_text(
+            &GLOBAL_FONT,
+            text,
+            PxScale::from(300.0),
+            w as u32,
+            h as u32,
+            0,
+            0,
+        );
+        let image = rotate_text(&image, 180.0);
+        let mut buf = Vec::new();
+        image.write_to(&mut Cursor::new(&mut buf), ImageFormat::Png)?;
+        let res = session.run(buf)?;
+        println!("{:?}", res);
+        let point_box = &res.det_result.0[0].boxes;
+        assert!(points_range(point_box.br(), w, h) < 100f32);
+        assert_eq!(res.cls_result.0[0].label.label, 180);
+        assert_eq!(res.rec_result.0[0].text, text);
+        Ok(())
+    }
+}

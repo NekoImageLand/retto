@@ -25,7 +25,7 @@ macro_rules! em_import {
         #[link(wasm_import_module = "env")]
         unsafe extern "C" {
             #[link_name = stringify!($js_name)]
-            fn $c_name($($param: $ty),*) -> $ret;
+            pub(crate) fn $c_name($($param: $ty),*) -> $ret;
         }
     };
 }
@@ -48,7 +48,7 @@ macro_rules! em_js_deps {
 macro_rules! _em_js_internal {
     ($ret:ty, $c_name:ident, $js_name:ident, ($($param_name:ident: $param_type:ty),*), $code:expr) => {
         paste::paste! {
-            em_import!(
+            $crate::em_import!(
                 $js_name,
                 $c_name,
                 ($($param_name: $param_type),*),
@@ -71,7 +71,7 @@ macro_rules! _em_js_internal {
                 "<::>",
                 $code,
                 "\0"
-            ).len()] = _str_to_bytes!(concat!(
+            ).len()] = $crate::_str_to_bytes!(concat!(
                 concat!("(", stringify!($($param_name),*), ")" ),
                 "<::>",
                 $code,
@@ -86,7 +86,7 @@ macro_rules! _em_js_internal {
 #[macro_export]
 macro_rules! em_js {
     ($ret:ty, $name:ident, ($($param_name:ident: $param_type:ty),*), $($code:tt)+) => {
-        _em_js_internal!(
+        $crate::_em_js_internal!(
             $ret,
             $name,
             $name,
@@ -101,7 +101,7 @@ macro_rules! em_js {
 macro_rules! em_async_js {
     ($ret:ty, $name:ident, ($($param_name:ident: $param_type:ty),*), $($code:tt)+) => {
         paste::paste! {
-            _em_js_internal!(
+            $crate::_em_js_internal!(
                 $ret,
                 $name,
                 [<__asyncjs__ $name>],

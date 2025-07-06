@@ -7,7 +7,7 @@ setup:
     rustup toolchain install nightly --profile complete
     rustup target add wasm32-unknown-emscripten --toolchain nightly
 
-check: fmt-check clippy-check build-check
+check: fmt-check clippy-check build-check test-check
 
 fmt-check: setup
     cargo +nightly fmt --all -- --check
@@ -17,6 +17,9 @@ clippy-check: setup
 
 build-check: setup
     cargo +nightly check --locked --all-targets --all-features
+
+test-check: setup
+    cargo +nightly test --locked --all-targets --all-features
 
 build-cli: setup
     cargo build -p retto-cli --features "hf-hub" --release

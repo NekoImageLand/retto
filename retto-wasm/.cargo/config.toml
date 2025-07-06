@@ -9,8 +9,16 @@ rustflags = [
     "-Ctarget-feature=+atomics,+bulk-memory,+mutable-globals"
 ]
 
+[target.'cfg(target_env="msvc")']
+rustflags = [
+    "-C", "link-arg=/entry:main"
+]
+
+[target.'cfg(all(unix, not(target_os = "emscripten")))']
+rustflags = ["-C", "link-arg=-e main"]
+
 [env]
-CXXFLAGS_wasm32_unknown_emscripten="-Os -flto -fexceptions -fno-rtti -pthread -msse4.2 -msimd128"
+CXXFLAGS_wasm32_unknown_emscripten = "-Os -flto -fexceptions -fno-rtti -pthread -msse4.2 -msimd128"
 
 [profile.release]
 debug = false

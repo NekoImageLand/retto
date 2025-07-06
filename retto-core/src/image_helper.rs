@@ -220,15 +220,13 @@ impl ImageHelper {
         Ok(arr)
     }
 
-    pub fn get_crop_img(&self, point: &PointBox<OrderedFloat<f64>>) -> RgbImage {
-        let img_crop_width = max(point.width_brc(), point.width_tlc()).into_inner() as f32;
-        let img_crop_height = max(point.height_brc(), point.height_tlc()).into_inner() as f32;
+    pub fn get_crop_img(&self, point: &PointBox<OrderedFloat<f32>>) -> RgbImage {
+        let img_crop_width = max(point.width_brc(), point.width_tlc()).into_inner();
+        let img_crop_height = max(point.height_brc(), point.height_tlc()).into_inner();
         let (w, h) = (img_crop_width as u32, img_crop_height as u32);
         let mut out: RgbImage = ImageBuffer::new(w, h);
         let proj = Projection::from_control_points(
-            point
-                .points()
-                .map(|p| (p.x.into_inner() as f32, p.y.into_inner() as f32)),
+            point.points().map(|p| (p.x.into_inner(), p.y.into_inner())),
             [
                 (0.0, 0.0),
                 (img_crop_width, 0.0),

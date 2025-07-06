@@ -3,7 +3,7 @@ use imageproc::point::Point as ImagePoint;
 use num_traits::{AsPrimitive, Num, NumCast, Signed};
 use std::fmt::Debug;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -14,7 +14,7 @@ use std::fmt::Debug;
 )]
 pub struct Point<T>
 where
-    T: Num + NumCast + Signed + Copy + Ord + Debug,
+    T: Num + NumCast + Signed + AsPrimitive<f32> + Copy + Ord + Debug,
 {
     pub x: T,
     pub y: T,
@@ -22,16 +22,26 @@ where
 
 impl<T> Point<T>
 where
-    T: Num + NumCast + Signed + Copy + Ord + Debug,
+    T: Num + NumCast + Signed + AsPrimitive<f32> + Copy + Ord + Debug,
 {
     pub fn new(x: T, y: T) -> Self {
         Point { x, y }
+    }
+
+    pub fn dist2(&self) -> T {
+        self.x * self.x + self.y * self.y
+    }
+
+    pub fn range(&self, other: &Self) -> f32 {
+        let dx = self.x.as_() - other.x.as_();
+        let dy = self.y.as_() - other.y.as_();
+        (dx * dx + dy * dy).sqrt()
     }
 }
 
 impl<T> From<ImagePoint<T>> for Point<T>
 where
-    T: Num + NumCast + Signed + Copy + Ord + Debug,
+    T: Num + NumCast + Signed + AsPrimitive<f32> + Copy + Ord + Debug,
 {
     fn from(p: ImagePoint<T>) -> Self {
         Point { x: p.x, y: p.y }
@@ -48,7 +58,7 @@ where
 )]
 pub struct PointBox<T>
 where
-    T: Num + NumCast + Signed + Copy + Ord + Debug,
+    T: Num + NumCast + Signed + AsPrimitive<f32> + Copy + Ord + Debug,
 {
     /// Points are ordered as clockwise starting from the top-left corner
     inner: [Point<T>; 4],
@@ -56,7 +66,7 @@ where
 
 impl<T> Debug for PointBox<T>
 where
-    T: Num + NumCast + Signed + Copy + Ord + Debug,
+    T: Num + NumCast + Signed + AsPrimitive<f32> + Copy + Ord + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PointBox")
@@ -70,7 +80,7 @@ where
 
 impl<T> PointBox<T>
 where
-    T: Num + NumCast + Signed + Copy + Ord + Debug,
+    T: Num + NumCast + Signed + AsPrimitive<f32> + Copy + Ord + Debug,
 {
     pub fn new_from_clockwise(points: [Point<T>; 4]) -> Self {
         PointBox { inner: points }

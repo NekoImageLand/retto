@@ -59,7 +59,7 @@ jobs:
       - name: Clippy Check
         run: just clippy-check
 
-  build-check:
+  test-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -71,12 +71,12 @@ jobs:
       - name: Setup Rust toolchain
         run: just setup
       - name: Build Check
-        run: just build-check
+        run: just test-check
 
   build-cli:
     name: Build retto-cli
     runs-on: ${{ matrix.host }}
-    needs: ["fmt-check", "clippy-check", "build-check"]
+    needs: ["fmt-check", "clippy-check", "test-check"]
     strategy:
       matrix:
         host: [ubuntu-latest, windows-latest, macos-latest]
@@ -106,7 +106,7 @@ jobs:
   build-wasm:
     name: Build retto-wasm
     runs-on: ubuntu-latest
-    needs: ["fmt-check", "clippy-check", "build-check"]
+    needs: ["fmt-check", "clippy-check", "test-check"]
     steps:
       - uses: actions/checkout@v4
       - uses: extractions/setup-just@v3
