@@ -2305,7 +2305,7 @@ dependencies = [
 
 [[package]]
 name = "retto-cli"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "anyhow",
  "clap",
@@ -2318,7 +2318,7 @@ dependencies = [
 
 [[package]]
 name = "retto-core"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "ab_glyph",
  "anyhow",
@@ -2349,7 +2349,7 @@ dependencies = [
 
 [[package]]
 name = "retto-wasm"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "once_cell",
  "paste",
