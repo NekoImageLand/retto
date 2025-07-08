@@ -30,7 +30,7 @@ pub(crate) trait ImagesOrder {
 
 // TODO: Use fast_image_resize with interpolation methods
 impl ImageHelper {
-    /// Heavy
+    // Heavy
     pub fn new_from_raw_img_flow(input: impl AsRef<[u8]>) -> RettoResult<Self> {
         // TODO: cvt_two_to_three + cvt_four_to_three
         let image = image::load_from_memory(input.as_ref())?;
@@ -43,7 +43,7 @@ impl ImageHelper {
         })
     }
 
-    /// Heavy
+    // Heavy
     pub fn new_from_rgb_image_flow(input: impl AsRef<[u8]>, height: usize, weight: usize) -> Self {
         let image: ImageBuffer<Rgb<u8>, &[u8]> =
             ImageBuffer::from_raw(weight as u32, height as u32, input.as_ref())

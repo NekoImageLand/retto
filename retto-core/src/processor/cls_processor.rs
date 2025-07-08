@@ -12,9 +12,15 @@ use std::fmt::Display;
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ClsProcessorConfig {
+    /// Prediction scale
     pub image_shape: [usize; 3],
+    /// Batch size predicted by direction classifier
     pub batch_num: usize,
+    /// Predict threshold. If the model predicts a result of 180 degrees and the score is
+    /// greater than the threshold, the final prediction result is considered to be 180 degrees,
+    /// and the image will be reversed.
     pub thresh: f32,
+    /// The angle value corresponding to the class ID
     pub label: Vec<u16>,
 }
 

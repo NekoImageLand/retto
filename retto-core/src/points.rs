@@ -12,6 +12,7 @@ use std::fmt::Debug;
         deserialize = "T: serde::de::Deserialize<'de>"
     ))
 )]
+/// A point on a two-dimensional plane
 pub struct Point<T>
 where
     T: Num + NumCast + Signed + AsPrimitive<f32> + Copy + Ord + Debug,
@@ -56,11 +57,13 @@ where
         deserialize = "T: serde::de::Deserialize<'de>"
     ))
 )]
+/// A rectangular point frame on a two-dimensional plane <br></br>
+/// **Points are ordered as clockwise starting from the top-left corner**
 pub struct PointBox<T>
 where
     T: Num + NumCast + Signed + AsPrimitive<f32> + Copy + Ord + Debug,
 {
-    /// Points are ordered as clockwise starting from the top-left corner
+    // Points are ordered as clockwise starting from the top-left corner
     inner: [Point<T>; 4],
 }
 

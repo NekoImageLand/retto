@@ -20,8 +20,11 @@ use std::fmt::Debug;
 #[derive(Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ScoreMode {
+    /// Calculate the average score based on all pixels within the original polygon.
+    /// This method is relatively slow but more accurate.
     Slow,
     #[default]
+    /// Calculate the average score for all pixels within the bounding rectangle of the polygon
     Fast,
 }
 
@@ -29,27 +32,43 @@ pub enum ScoreMode {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum LimitType {
     #[default]
+    /// Ensure that the shortest side of the image is not less than `limit_side_len`
     Min,
+    /// Ensure that the longest side of the image does not exceed `limit_side_len`
     Max,
 }
 
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+// DB algorithm
 pub struct DetProcessorConfig {
     // Preprocess
+    /// Limit side length of input image.
     pub limit_side_len: usize,
+    /// Input image side length restriction type.
     pub limit_type: LimitType,
     pub mean: Array1<f32>,
     pub std: Array1<f32>,
     pub scale: f32,
     // PostProcess
+    /// In the probability map output by DB, only pixels with scores greater than the threshold
+    /// are considered to be text pixels.
     pub threch: f32,
+    /// If the average score of all pixels within the border of the measurement result is greater
+    /// than the threshold value, the result is considered to be a text area.
     pub box_thresh: f32,
+    /// Maximum number of text boxes output.
     pub max_candidates: usize,
+    /// Expansion coefficient of the
+    /// [Vatti clipping algorithm](https://en.wikipedia.org/wiki/Vatti_clipping_algorithm),
+    /// using this method to expand the text area.
     pub unclip_ratio: f32,
+    /// Whether to expand the segmentation results.
     pub use_dilation: bool,
+    /// DB detection result scoring method.
     pub score_mode: ScoreMode,
-    pub min_size: usize,
+    /// Minimum side length threshold for text boxes.
+    pub min_mini_box_size: usize,
     pub dilation_kernel: Option<Array2<usize>>,
 }
 
@@ -67,7 +86,7 @@ impl Default for DetProcessorConfig {
             unclip_ratio: 1.6,
             use_dilation: true,
             score_mode: ScoreMode::default(),
-            min_size: 3,
+            min_mini_box_size: 3,
             dilation_kernel: Some(Array2::from_elem((2, 2), 1)),
         }
     }
@@ -77,7 +96,7 @@ impl Default for DetProcessorConfig {
 pub(crate) struct DetProcessor<'p> {
     config: &'p DetProcessorConfig,
     dilation_kernel: Option<Mask>,
-    /// Image size after initial resize
+    // Image size after initial resize
     ori_h: usize,
     ori_w: usize,
 }
@@ -276,7 +295,7 @@ impl ProcessorInner for DetProcessor<'_> {
             .filter_map(|contour| {
                 // #region boxes_from_bitmap
                 let (points, sside) = self.get_mini_boxes(&contour.points);
-                if sside < self.config.min_size as f32 {
+                if sside < self.config.min_mini_box_size as f32 {
                     return None;
                 }
                 let mean_score = self.box_score_fast(&pred, &points);
@@ -286,7 +305,7 @@ impl ProcessorInner for DetProcessor<'_> {
                 let boxes = self.unclip(&points);
                 let (mut point_box, sside) = self.get_mini_boxes(&boxes[..]);
                 // TODO: Based on the accuracy issue mentioned earlier, should +2 need fine-tuned?
-                if sside < (self.config.min_size + 2) as f32 {
+                if sside < (self.config.min_mini_box_size + 2) as f32 {
                     return None;
                 }
                 point_box.scale_and_clip(w as f64, h as f64, self.ori_w as f64, self.ori_h as f64);

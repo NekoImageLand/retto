@@ -12,7 +12,9 @@ use std::cmp::{Reverse, max};
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum RecCharacterDictProvider {
+    /// From external sources (not embedded in the model)
     OutSide(RettoWorkerModelSource),
+    /// TODO: From the model itself
     Inline(), // TODO: from onnx model itself?
 }
 
@@ -98,8 +100,11 @@ impl RecCharacter {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RecProcessorConfig {
+    /// Identify the provider of the model dictionary source
     pub character_source: RecCharacterDictProvider,
+    /// Image size during recognition
     pub image_shape: [usize; 3],
+    /// Batch size of recognition
     pub batch_num: usize,
 }
 
