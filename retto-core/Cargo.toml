@@ -23,7 +23,6 @@ ort = { workspace = true, optional = true, default-features = false }
 ort-sys = { workspace = true, optional = true, default-features = false } # https://github.com/pykeio/ort/issues/399
 tracing.workspace = true
 hf-hub = { workspace = true, optional = true }
-rstest = "0.25.0"
 
 [dev-dependencies]
 reqwest = { workspace = true, features = ["blocking"] }
@@ -38,7 +37,7 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 
 [features]
-serde = ["dep:serde", "serde/default", "dep:serde_json", "serde_json/default", "ordered-float/serde", "ndarray/serde"]
+serde = ["dep:serde", "dep:serde_json", "ordered-float/serde", "ndarray/serde"]
 download-models = []
 hf-hub = ["dep:hf-hub"]
 backend-ort = ["ort/default"]
