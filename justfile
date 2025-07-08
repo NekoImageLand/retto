@@ -4,7 +4,7 @@ clean:
     cargo clean; rm -r retto-core/models; rm -r retto-wasm/fe/retto_wasm.*; rm -r retto-wasm/fe/*.tgz; rm -r retto-wasm/fe/dist; rm -r retto-wasm/fe/node_modules
 
 setup:
-    rustup toolchain install nightly --profile default
+    rustup toolchain install nightly --profile complete
     rustup target add wasm32-unknown-emscripten --toolchain nightly
 
 check: fmt-check clippy-check build-check test-check
