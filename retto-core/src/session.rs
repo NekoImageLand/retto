@@ -253,4 +253,14 @@ mod tests {
         assert_eq!(res.rec_result.0[0].text, text);
         Ok(())
     }
+
+    #[test]
+    #[allow(clippy::all)]
+    #[should_panic]
+    fn ab4edca3f85e0c13d6c98009b775a6b3() {
+        panic!(
+            "Oh no... I look useless, don't I? qwq \n\
+            そうは言っても申し訳ないので、一緒に Rust Playground に行きませんか?"
+        );
+    }
 }
